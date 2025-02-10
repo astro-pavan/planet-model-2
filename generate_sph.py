@@ -1,6 +1,8 @@
 from planet import planet
 import woma
 import numpy as np
+import os
+import shutil
 
 R_earth = 6.371e6  # m
 M_earth = 5.9724e24  # kg
@@ -60,8 +62,13 @@ impactor_particles.A2_vel -= A1_vel_COM
 
 target_particles.A1_mat[target_particles.A1_mat == 304] = 901
 
+os.mkdir('../impact-3')
+os.mkdir('../impact-3/snapshots')
+shutil.copyfile('impact-parameters.yml', '../impact-3/impact-parameters.yml')
+shutil.copyfile('slurm-submit.sh', '../impact-3/slurm-submit.sh')
+
 import h5py
-with h5py.File(f'sub_neptune_impact_3.hdf5', "w") as f:
+with h5py.File(f'../impact-3/initial_conditions.hdf5', "w") as f:
     woma.save_particle_data(
         f,
         np.append(target_A2_pos, impactor_particles.A2_pos, axis=0),
