@@ -61,6 +61,6 @@ EoS:
     planetary_use_ANEOS_iron:         1
     planetary_use_custom_1:           1
     # Tablulated EoS file paths.
-    planetary_ANEOS_forsterite_table_file:  ../planet-model-2/EOS-data/ANEOS_forsterite_S19.txt
-    planetary_ANEOS_iron_table_file:        ../planet-model-2/EOS-data/ANEOS_iron_S20.txt
-    planetary_custom_1_table_file:          ../planet-model-2/EOS-data/AQUA_H20_v2.txt
+    planetary_ANEOS_forsterite_table_file:  ../EOS-data/ANEOS_forsterite_S19.txt
+    planetary_ANEOS_iron_table_file:        ../EOS-data/ANEOS_iron_S20.txt
+    planetary_custom_1_table_file:          ../EOS-data/AQUA_H20_v2.txt
