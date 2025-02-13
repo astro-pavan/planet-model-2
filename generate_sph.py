@@ -64,8 +64,8 @@ target_particles.A1_mat[target_particles.A1_mat == 304] = 901
 
 os.mkdir('../impact-3')
 os.mkdir('../impact-3/snapshots')
-shutil.copyfile('impact-parameters.yml', '../impact-3/impact-parameters.yml')
-shutil.copyfile('slurm-submit.sh', '../impact-3/slurm-submit.sh')
+shutil.copyfile('SPH/impact-parameters.yml', '../impact-3/impact-parameters.yml')
+shutil.copyfile('SPH/slurm-submit.sh', '../impact-3/slurm-submit.sh')
 
 import h5py
 with h5py.File(f'../impact-3/initial_conditions.hdf5', "w") as f:
