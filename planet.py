@@ -9,6 +9,8 @@ import woma
 
 import matplotlib.pyplot as plt
 
+from eos_water import A2_phase_simple, A1_T, A1_P
+
 magrathea_path = '/data/pt426/Magrathea'
 
 class planet:
@@ -30,7 +32,7 @@ class planet:
         config_file_modifications = {
             12: f'mass_of_core={core_mass:.2f}	# Earth Masses in core',
             13: f'mass_of_mantle={mantle_mass:.2f}	# Earth Masses in mantle',
-            14: f'mass_of_hydro={ocean_mass:.2f}# Earth Masses in hydrosphere',
+            14: f'mass_of_hydro={ocean_mass:.2f} # Earth Masses in hydrosphere',
             15: f'mass_of_atm={atmosphere_mass:.2f}		# Earth Masses in atmosphere',
             16: f'surface_temp={surface_temp:.0f}	# Kelvin, top of planet where enclosed mass equals total mass',
             21: f'output_file="./result/{name}.txt"	# Output file name & location'
@@ -74,21 +76,37 @@ class planet:
         self.M = np.max(self.df['M (earth)']) * 5.9724e24
         self.R = np.max(self.df['Radius (earth)']) * 6371000
 
-    def make_particle_planet(self, n_particles):
-        
-        # makes MAGRATHEA data into a form SEAGEN likes
-
         # gets material IDs for each material
 
-        mat_id = np.where(self.df['Phase'] == 'Fe hcp (Smith)', 401, 0)
-        mat_id = np.where(self.df['Phase'] == 'Si PPv (Sakai)', 400, mat_id)
-        mat_id = np.where(self.df['Phase'] == 'Pv (Dorogokupets)', 400, mat_id)
-        mat_id = np.where(self.df['Phase'] == 'Rwd (Dorogokupets)', 400, mat_id)
-        mat_id = np.where(self.df['Phase'] == 'Wds (Dorogokupets)', 400, mat_id)
-        mat_id = np.where(self.df['Phase'] == 'Fo/Ol (Dorogokupets)', 400, mat_id)
-        mat_id = np.where(self.df['Phase'] == 'H2O (AQUA)', 304, mat_id)
-        mat_id = np.where(self.df['Phase'] == 'H/He (Chabrier)', 307, mat_id)
-        mat_id = np.where(self.df['Phase'] == 'Isothermal Ideal Gas', 307, mat_id)
+        self.mat_id = np.where(self.df['Phase'] == 'Fe hcp (Smith)', 401, 0)
+        self.mat_id = np.where(self.df['Phase'] == 'Si PPv (Sakai)', 400, self.mat_id)
+        self.mat_id = np.where(self.df['Phase'] == 'Pv (Dorogokupets)', 400, self.mat_id)
+        self.mat_id = np.where(self.df['Phase'] == 'Rwd (Dorogokupets)', 400, self.mat_id)
+        self.mat_id = np.where(self.df['Phase'] == 'Wds (Dorogokupets)', 400, self.mat_id)
+        self.mat_id = np.where(self.df['Phase'] == 'Fo/Ol (Dorogokupets)', 400, self.mat_id)
+        self.mat_id = np.where(self.df['Phase'] == 'H2O (AQUA)', 304, self.mat_id)
+        self.mat_id = np.where(self.df['Phase'] == 'H/He (Chabrier)', 307, self.mat_id)
+        self.mat_id = np.where(self.df['Phase'] == 'Isothermal Ideal Gas', 307, self.mat_id)
+
+        plt.contourf(A1_T, A1_P, A2_phase_simple, [-2, -1, 0, 1, 2, 3, 4], cmap='Set2')
+        plt.colorbar()
+
+        iron_mask = self.mat_id == 401
+        rock_mask = self.mat_id == 400
+        water_mask = self.mat_id == 304
+        gas_mask = self.mat_id == 307
+
+        plt.plot(self.df['T (K)'][water_mask], self.df['P (GPa)'][water_mask] * 1e9, color='blue')
+        plt.plot(self.df['T (K)'][gas_mask], self.df['P (GPa)'][gas_mask] * 1e9, color='lightblue')
+        plt.plot(self.df['T (K)'][rock_mask], self.df['P (GPa)'][rock_mask] * 1e9, color='grey')
+        plt.yscale('log')
+        plt.ylim([1e13, 1e3])
+        plt.xlim([100, 3000])
+        plt.savefig('structure.png', dpi=500)
+
+    def make_particle_planet(self, n_particles):
+        
+        # makes MAGRATHEA data into a form SEAGEN like
 
         woma.load_eos_tables()
 
@@ -96,7 +114,7 @@ class planet:
         
         A1_r = np.array(self.df['Radius (earth)'] * 6371000)
         A1_rho = np.array(self.df['Density (g cm^-3)'] * 1000)
-        A1_mat_id = mat_id
+        A1_mat_id = self.mat_id
         A1_T = np.array(self.df['T (K)'])
         A1_P = np.array(self.df['P (GPa)'] * 1e9)
         A1_u = woma.A1_u_rho_T(A1_rho, A1_T, A1_mat_id)
@@ -131,4 +149,12 @@ class planet:
         A2_pos = np.transpose([particles.A1_x, particles.A1_y, particles.A1_z])
 
         return particles, A1_h, A2_pos
-    
+
+
+if __name__ == '__main__':
+    m = 5.6
+    m_water = m * 0.2
+    m_mantle = (m - m_water) * 0.66
+    m_core = m - m_mantle - m_water
+
+    sub_neptune = planet('sub-neptune', m_core, m_mantle, m_water, m * 0.001, 160)
