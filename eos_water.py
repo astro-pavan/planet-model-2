@@ -112,28 +112,29 @@ def generate_adiabat(P, T):
         P_min, P_max = s_contour_P.min(), s_contour_P.max()
 
         if P_max > P > P_min:
-            plt.plot(s_contour_T, s_contour_P, 'k-')
+            # plt.plot(s_contour_T, s_contour_P, 'k-')
             adiabat = interp1d(s_contour_P, s_contour_T)
         else:
-            plt.plot(s_contour_T, s_contour_P, 'k--')
+            pass
+            # plt.plot(s_contour_T, s_contour_P, 'k--')
 
-        plt.plot(T_mazevet_boundaries, P_mazevet_boundaries, 'r-')
+        # plt.plot(T_mazevet_boundaries, P_mazevet_boundaries, 'r-')
 
     
     return adiabat
 
 
-plt.contourf(A1_T, A1_P, A2_phase_simple, [-2, -1, 0, 1, 2, 3, 4], cmap='Set2')
-plt.colorbar()
+# plt.contourf(A1_T, A1_P, A2_phase_simple, [-2, -1, 0, 1, 2, 3, 4], cmap='Set2')
+# plt.colorbar()
 
-generate_adiabat(1e5, 200)
-generate_adiabat(1e5, 250)
-generate_adiabat(1e5, 300)
-generate_adiabat(1e5, 350)
-generate_adiabat(1e5, 400)
+# generate_adiabat(1e5, 200)
+# generate_adiabat(1e5, 250)
+# generate_adiabat(1e5, 300)
+# generate_adiabat(1e5, 350)
+# generate_adiabat(1e5, 400)
 
-plt.yscale('log')
-plt.ylim([1e13, 1e4])
-plt.xlim([100, 3000])
-plt.savefig('contour.png', dpi=500)
-plt.close()
+# plt.yscale('log')
+# plt.ylim([1e13, 1e4])
+# plt.xlim([100, 3000])
+# plt.savefig('contour.png', dpi=500)
+# plt.close()

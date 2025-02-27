@@ -1,4 +1,4 @@
-from planet import planet
+from generate_planet import planet
 import woma
 import numpy as np
 import os

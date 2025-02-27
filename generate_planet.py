@@ -9,7 +9,7 @@ import woma
 
 import matplotlib.pyplot as plt
 
-from eos_water import A2_phase_simple, A1_T, A1_P
+from eos_water import A2_phase_simple, A1_T, A1_P, generate_adiabat
 
 magrathea_path = '/data/pt426/Magrathea'
 
@@ -88,6 +88,10 @@ class planet:
         self.mat_id = np.where(self.df['Phase'] == 'H/He (Chabrier)', 307, self.mat_id)
         self.mat_id = np.where(self.df['Phase'] == 'Isothermal Ideal Gas', 307, self.mat_id)
 
+        plt.close()
+
+        plt.figure(figsize=(10, 10))
+
         plt.contourf(A1_T, A1_P, A2_phase_simple, [-2, -1, 0, 1, 2, 3, 4], cmap='Set2')
         plt.colorbar()
 
@@ -99,6 +103,16 @@ class planet:
         plt.plot(self.df['T (K)'][water_mask], self.df['P (GPa)'][water_mask] * 1e9, color='blue')
         plt.plot(self.df['T (K)'][gas_mask], self.df['P (GPa)'][gas_mask] * 1e9, color='lightblue')
         plt.plot(self.df['T (K)'][rock_mask], self.df['P (GPa)'][rock_mask] * 1e9, color='grey')
+
+        T_water_top = np.min(self.df['T (K)'][water_mask])
+        P_water_top = np.min(self.df['P (GPa)'][water_mask]) * 1e9
+
+        adiabat = generate_adiabat(P_water_top, T_water_top)
+
+        plt.scatter(T_water_top, P_water_top, c='black')
+
+        plt.plot(adiabat(self.df['P (GPa)'][water_mask] * 1e9), self.df['P (GPa)'][water_mask] * 1e9, 'k:')
+
         plt.yscale('log')
         plt.ylim([1e13, 1e3])
         plt.xlim([100, 3000])
