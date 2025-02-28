@@ -104,9 +104,9 @@ class eos:
 
         s_val = self.s_PT(P, T)
 
-        A2_P, A2_T = np.meshgrid(self.A1_P, self.A1_T)
+        A2_T, A2_P = np.meshgrid(self.A1_T, self.A1_P)
 
-        s_contour_generator = contour_generator(A2_T, A2_P, self.A2_s_PT)
+        s_contour_generator = contour_generator(A2_P, A2_T, self.A2_s_PT)
 
         s_contours = s_contour_generator.lines(s_val)
 

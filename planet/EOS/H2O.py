@@ -1,4 +1,4 @@
-from EOS import eos
+from EOS.EOS import eos
 
 import numpy as np
 import pandas as pd
@@ -49,3 +49,5 @@ class eos_water(eos):
         self.A2_rho_PT = np.reshape(df_pt['rho'], (1093, 301))
         self.A2_s_PT = np.reshape(df_pt['s'], (1093, 301))
         self.A2_u_PT = np.reshape(df_pt['u'], (1093, 301))
+
+        super().make_interpolators()
