@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.interpolate import CubicSpline
+from scipy.interpolate import CubicSpline, RegularGridInterpolator
 from contourpy import contour_generator
 
 
@@ -48,25 +48,65 @@ class eos:
 
     def __init__(self):
         
-        self.A1_rho, self.A1_P, self.A1_T = None, None, None
+        self.A1_P, self.A1_T = None, None
 
-        self.A2_P_rhoT = None
+        self.phase_names = {}
+        
         self.A2_rho_PT = None
-
-        self.A2_s_rhoT = None
         self.A2_s_PT = None
+        self.A2_u_PT = None
+        self.A2_phase = None
+
+        self.A1_rho = None
+        self.A2_P_rhoT = None
+        self.A2_s_rhoT = None
+
+        self.rho_PT_interpolator = None
+        self.s_PT_interpolator = None
+        self.u_PT_interpolator = None
 
     def make_interpolators(self):
-        pass
+        
+        self.rho_PT_interpolator = RegularGridInterpolator(
+            (np.log10(self.A1_P), np.log10(self.A1_T)),
+            np.log10(self.A2_rho_PT),
+            method='linear',
+            fill_value=None,
+            bounds_error=True
+        )
 
+        self.s_PT_interpolator = RegularGridInterpolator(
+            (np.log10(self.A1_P), np.log10(self.A1_T)),
+            np.log10(self.A2_s_PT),
+            method='linear',
+            fill_value=None,
+            bounds_error=True
+        )
+
+        self.u_PT_interpolator = RegularGridInterpolator(
+            (np.log10(self.A1_P), np.log10(self.A1_T)),
+            np.log10(self.A2_u_PT),
+            method='linear',
+            fill_value=None,
+            bounds_error=True
+        )
+
+    def rho_PT(self, P, T):
+        return 10 ** self.rho_PT_interpolator(make_into_pair_array(np.log10(P), np.log10(T)))
+    
     def s_PT(self, P, T):
-        pass
+        return 10 ** self.s_PT_interpolator(make_into_pair_array(np.log10(P), np.log10(T)))
+    
+    def u_PT(self, P, T):
+        return 10 ** self.u_PT_interpolator(make_into_pair_array(np.log10(P), np.log10(T)))
 
     def generate_adiabat(self, P, T):
 
         s_val = self.s_PT(P, T)
 
-        s_contour_generator = contour_generator(A2_T, A2_P, A2_s)
+        A2_P, A2_T = np.meshgrid(self.A1_P, self.A1_T)
+
+        s_contour_generator = contour_generator(A2_T, A2_P, self.A2_s_PT)
 
         s_contours = s_contour_generator.lines(s_val)
 
