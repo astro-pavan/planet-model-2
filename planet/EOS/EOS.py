@@ -114,12 +114,12 @@ class eos:
 
         for s_contour in s_contours:
 
-            s_contour_P = s_contour[:, 1]
-            s_contour_T = s_contour[:, 0]
+            s_contour_P = s_contour[:, 0]
+            s_contour_T = s_contour[:, 1]
 
             P_min, P_max = s_contour_P.min(), s_contour_P.max()
 
             if P_max > P > P_min:
-                adiabat = CubicSpline(s_contour_P, s_contour_T)
+                adiabat = CubicSpline(s_contour_P[::-1], s_contour_T[::-1])
 
         return adiabat
