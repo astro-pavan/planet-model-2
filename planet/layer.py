@@ -8,7 +8,7 @@ R_earth = 6371000
 
 class layer:
 
-    def __init__(self, m_top, m_bottom, r_start, P_start, T_start, eos, integrate_down=True, temp_profile='adiabat'):
+    def __init__(self, m_top, m_bottom, r_start, P_start, T_start, eos, integrate_down=True, temp_profile='adiabatic'):
         
         n = 64
         self.m = np.linspace(m_bottom, m_top, n)
@@ -20,9 +20,9 @@ class layer:
 
         y0 = [r_start, P_start]
 
-        if temp_profile == 'adiabat':
+        if temp_profile == 'adiabatic':
             self.T_profile = self.eos.generate_adiabat(P_start, T_start)
-        elif temp_profile == 'isotherm':
+        elif temp_profile == 'isothermal':
             self.T_profile = lambda P: T_start
         
         def dr_dm(m, r, P):
@@ -43,12 +43,16 @@ class layer:
         r_solution = solution.y[0, :]
         log_P_solution = np.log10(solution.y[1, :])
 
-        r_interpolator = CubicSpline(m_solution[::-1], r_solution[::-1])
-        log_P_interpolator = CubicSpline(m_solution[::-1], log_P_solution[::-1])
+        try:
+            r_interpolator = CubicSpline(m_solution, r_solution)
+            log_P_interpolator = CubicSpline(m_solution, log_P_solution)
+        except ValueError:
+            r_interpolator = CubicSpline(m_solution[::-1], r_solution[::-1])
+            log_P_interpolator = CubicSpline(m_solution[::-1], log_P_solution[::-1])
 
         self.r = r_interpolator(self.m)
         self.P = 10 ** log_P_interpolator(self.m)
-        self.T = self.T_profile(self.P)
+        self.T = self.T_profile(self.P) if temp_profile == 'adiabatic' else np.full_like(self.m, T_start)
         self.rho = self.eos.rho_PT(self.P, self.T)
 
 
