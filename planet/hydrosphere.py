@@ -3,7 +3,7 @@ from EOS.H2O import eos_water
 
 class hydrosphere(layer):
 
-    def __init__(self, m_top, m_bottom, r_start, P_start, T_start, integrate_down=True, temp_profile='adiabat'):
+    def __init__(self, m_top, m_bottom, r_start, P_start, T_start, integrate_down=True, temp_profile='adiabatic'):
 
         eos_h2o = eos_water()
         eos_h2o.make_interpolators()
