@@ -123,3 +123,21 @@ class eos:
                 adiabat = CubicSpline(s_contour_P[::-1], s_contour_T[::-1])
 
         return adiabat
+    
+
+class eos_mix(eos):
+
+    def __init__(self, eos1, eos2):
+        
+        self.eos1 = eos1
+        self.eos2 = eos2
+
+    def rho_PT(self, P, T, x):
+        return 1 / ((x / self.eos1.rho_PT(P, T)) + ((1 - x) / self.eos2.rho_PT(P, T)))
+
+    def s_PT(self, P, T, x):
+        return x * self.eos1.s_PT(P, T) + (1 - x) * self.eos2.s_PT(P, T)
+    
+    def u_PT(self, P, T, x):
+        return x * self.eos1.u_PT(P, T) + (1 - x) * self.eos2.u_PT(P, T)
+    
