@@ -15,8 +15,9 @@ class layer:
         self.r, self.P, self.T, self.rho = np.zeros_like(self.m), np.zeros_like(self.m), np.zeros_like(self.m), np.zeros_like(self.m)
         self.eos = eos
 
+        self.max_mass_step = 0.01 * M_earth
+
         t_span = (m_top, m_bottom) if integrate_down else (m_bottom, m_top)
-        t_span = (m_top, m_bottom)
 
         y0 = [r_start, P_start]
 
@@ -37,11 +38,16 @@ class layer:
             dP = dP_dm(t, y[0], y[1])
             return (dr, dP)
         
-        solution = solve_ivp(f, t_span, y0, max_step=0.01*M_earth)
+        solution = solve_ivp(f, t_span, y0, max_step=self.max_mass_step)
 
         m_solution = solution.t
         r_solution = solution.y[0, :]
-        log_P_solution = np.log10(solution.y[1, :])
+        P_solution = solution.y[1, :]
+        positive_mask = P_solution > 0
+
+        m_solution = m_solution[positive_mask]
+        r_solution = r_solution[positive_mask]
+        log_P_solution = np.log10(P_solution[positive_mask])
 
         try:
             r_interpolator = CubicSpline(m_solution, r_solution)
@@ -53,6 +59,10 @@ class layer:
         self.r = r_interpolator(self.m)
         self.P = 10 ** log_P_interpolator(self.m)
         self.T = self.T_profile(self.P) if temp_profile == 'adiabatic' else np.full_like(self.m, T_start)
+
+        print(self.P)
+        print(self.T)
+
         self.rho = self.eos.rho_PT(self.P, self.T)
 
 
