@@ -2,9 +2,9 @@ from scipy.integrate import solve_ivp
 from scipy.interpolate import CubicSpline
 import numpy as np
 
-G = 6.674e-11
-M_earth = 5.972e24
-R_earth = 6371000
+G = 6.674e-11 # m^3 kg^-1 s^-2
+M_earth = 5.972e24 # kg
+R_earth = 6371000 # m 
 
 class layer:
 
@@ -49,20 +49,25 @@ class layer:
         r_solution = r_solution[positive_mask]
         log_P_solution = np.log10(P_solution[positive_mask])
 
-        try:
-            r_interpolator = CubicSpline(m_solution, r_solution)
-            log_P_interpolator = CubicSpline(m_solution, log_P_solution)
-        except ValueError:
-            r_interpolator = CubicSpline(m_solution[::-1], r_solution[::-1])
-            log_P_interpolator = CubicSpline(m_solution[::-1], log_P_solution[::-1])
+        if np.all(positive_mask):
 
-        self.r = r_interpolator(self.m)
-        self.P = 10 ** log_P_interpolator(self.m)
+            try:
+                r_interpolator = CubicSpline(m_solution, r_solution)
+                log_P_interpolator = CubicSpline(m_solution, log_P_solution)
+            except ValueError:
+                r_interpolator = CubicSpline(m_solution[::-1], r_solution[::-1])
+                log_P_interpolator = CubicSpline(m_solution[::-1], log_P_solution[::-1])
+
+            self.r = r_interpolator(self.m)
+            self.P = 10 ** log_P_interpolator(self.m)
+
+        else:
+            
+            self.m = m_solution
+            self.r = r_solution
+            self.P = P_solution[positive_mask]
+
         self.T = self.T_profile(self.P) if temp_profile == 'adiabatic' else np.full_like(self.m, T_start)
-
-        print(self.P)
-        print(self.T)
-
         self.rho = self.eos.rho_PT(self.P, self.T)
 
 
