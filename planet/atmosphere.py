@@ -76,8 +76,10 @@ class atmo(layer):
             16 : f'    gravity         = {g_surface:.2e}              # Gravitational acceleration at the surface [m s-2]',
             9 : f'    instellation    = {self.instellation * solar_constant:.1f}           # Stellar flux at planet\'s orbital distance [W m-2].',
             26 : f'    input_star      = "res/stellar_spectra/{spectral_types[self.host_star_spectral_type]}"              # Path to stellar spectrum.',
-            #58 : f'    initial_state   = ["iso", "300"]     # Ordered list of requests describing the initial state of the atmosphere (see wiki).',
-            56 : f'    solvers         = ["newton"]                        # Ordered list of solvers to apply (see wiki).'
+            58 : f'    initial_state   = ["iso", "400"]     # Ordered list of requests describing the initial state of the atmosphere (see wiki).',
+            56 : f'    solvers         = ["levenberg"]                        # Ordered list of solvers to apply (see wiki).',
+            25 : '    input_sf        = "res/spectral_files/Dayspring/48/Dayspring.sf"   # Path to SOCRATES spectral file.',
+            32 : '    vmr_dict        = { H2=1.0 }               # Volatile volume mixing ratios (=mole fractions).'
         }
 
         try:
