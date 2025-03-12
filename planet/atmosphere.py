@@ -1,7 +1,10 @@
 from layer import layer, M_earth, R_earth, G
 from EOS.H2O import eos_water
-from scipy.io import netcdf
 
+import netCDF4
+import numpy as np
+import pandas as pd
+from scipy.interpolate import CubicSpline
 import os
 
 AGNI_path = '/home/pt426/AGNI'
@@ -53,34 +56,69 @@ class atmo(layer):
         self.instellation = instellation
         self.host_star_spectral_type = spectral_type
 
+        self.P_surface = self.P[0]
+        self.r_surface = self.r[0]
+        self.g_surface = (G * self.m[0]) / (self.r_surface ** 2)
 
-    def run_AGNI(self):
+    def radiative_transfer(self):
+        
+        P_initial = np.logspace(1, 5, num=25)
+
+        P, T = self.run_AGNI(350, return_PT=True)
+
+        new_P = np.logspace(1, 5, num=60)
+        new_T = CubicSpline(P, T)(new_P)
+
+        self.run_AGNI((new_P, new_T), high_spectral_res=True)
+
+    def run_AGNI(self, PT_initial, high_spectral_res=False, return_PT=False):
 
         wd = os.getcwd()
         config_file_path = f'{AGNI_path}/res/config/default.toml'
         config_file_path_new = f'{AGNI_path}/res/config/pl2.toml'
 
-        P_surface = self.P[0] / 1e5
-        T_surface = self.T[0]
-        r_surface = self.r[0]
-        m_surface = self.m[0]
-
-        g_surface = (G * m_surface) / (r_surface ** 2)
+        n_spectral_bands = 256 if high_spectral_res else 48
 
         config_file_modifications = {
             5 : 'title = "pl2"',
             55 : '    solution_type   = 3                         # Solution type (see wiki).',
-            30 : f'    p_surf          = {P_surface:.2f}                     # Total surface pressure [bar].',
-            8 : f'    tmp_surf        = {T_surface:.1f}            # Surface temperature [kelvin].',
-            15 : f'    radius          = {r_surface:.3e}            # Planet radius at the surface [m].',
-            16 : f'    gravity         = {g_surface:.2e}              # Gravitational acceleration at the surface [m s-2]',
+            30 : f'    p_surf          = {self.P_surface / 1e5:.2f}                     # Total surface pressure [bar].',
+            15 : f'    radius          = {self.r_surface:.3e}            # Planet radius at the surface [m].',
+            16 : f'    gravity         = {self.g_surface:.2e}              # Gravitational acceleration at the surface [m s-2]',
             9 : f'    instellation    = {self.instellation * solar_constant:.1f}           # Stellar flux at planet\'s orbital distance [W m-2].',
             26 : f'    input_star      = "res/stellar_spectra/{spectral_types[self.host_star_spectral_type]}"              # Path to stellar spectrum.',
-            58 : f'    initial_state   = ["iso", "400"]     # Ordered list of requests describing the initial state of the atmosphere (see wiki).',
             56 : f'    solvers         = ["levenberg"]                        # Ordered list of solvers to apply (see wiki).',
-            25 : '    input_sf        = "res/spectral_files/Dayspring/48/Dayspring.sf"   # Path to SOCRATES spectral file.',
-            32 : '    vmr_dict        = { H2=1.0 }               # Volatile volume mixing ratios (=mole fractions).'
+            25 : f'    input_sf        = "res/spectral_files/Dayspring/{n_spectral_bands}/Dayspring.sf"   # Path to SOCRATES spectral file.',
+            32 : '    vmr_dict        = { H2=1.0 }               # Volatile volume mixing ratios (=mole fractions).',
+            60 : '    easy_start      = true                     # Initially down-scale convective/condensation fluxes, if initial guess is poor.',
+            11 : '    s0_fact         = 1.0            # Stellar flux scale factor which accounts for planetary rotation (c.f. Cronin+13).',
+            14 : '    albedo_s        = 0.5               # Grey surface albedo when material=greybody.'
         }
+
+        if type(PT_initial) is float or type(PT_initial) is int:
+
+            T_initial = PT_initial
+
+            config_file_modifications[58] = f'    initial_state   = ["iso", "{T_initial:.0f}"]     # Ordered list of requests describing the initial state of the atmosphere (see wiki).'
+            n_levels = 25
+            T_surface = T_initial
+
+        else:
+
+            P_initial, T_initial = PT_initial
+
+            n_levels = len(P_initial)
+            PT = pd.DataFrame({'P' : P_initial, 'T' : T_initial})
+            PT_profile_file_path = f'{AGNI_path}/res/config/PT_initial.csv'
+
+            PT.to_csv(PT_profile_file_path, index=False, header=False)
+
+            config_file_modifications[58] = f'    initial_state   = ["csv", "{PT_profile_file_path}"]     # Ordered list of requests describing the initial state of the atmosphere (see wiki).'
+            T_surface = T_initial[-1]
+
+
+        config_file_modifications[8] = f'    tmp_surf        = {T_surface:.1f}            # Surface temperature [kelvin].'
+        config_file_modifications[43] = f'    num_levels      = {n_levels:.0f}                       # Number of model levels.'
 
         try:
             # Read the file into a list of lines
@@ -108,3 +146,18 @@ class atmo(layer):
         os.chdir(AGNI_path)
         os.system('./agni.jl res/config/pl2.toml')
         os.chdir(wd)
+
+        AGNI_output_file_path = f'{AGNI_path}/out/atm.nc'
+
+        atm_nc = netCDF4.Dataset(AGNI_output_file_path)
+
+        # print(atm_nc.variables.keys())
+
+        P = np.array(atm_nc['p'])
+        T = np.array(atm_nc['tmp'])
+
+        atm_nc.close()
+
+        if return_PT:
+            return (P, T)
+
