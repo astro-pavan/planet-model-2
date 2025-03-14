@@ -1,5 +1,6 @@
 from layer import layer, M_earth, R_earth, G
 from EOS.H2O import eos_water
+from utils import modify_file_by_lines
 
 import netCDF4
 import numpy as np
@@ -120,28 +121,7 @@ class atmo(layer):
         config_file_modifications[8] = f'    tmp_surf        = {T_surface:.1f}            # Surface temperature [kelvin].'
         config_file_modifications[43] = f'    num_levels      = {n_levels:.0f}                       # Number of model levels.'
 
-        try:
-            # Read the file into a list of lines
-            with open(config_file_path, 'r') as file:
-                lines = file.readlines()
-            
-            # Apply modifications
-            for line_number, new_content in config_file_modifications.items():
-                if 1 <= line_number <= len(lines):
-                    lines[line_number - 1] = new_content + '\n'
-                else:
-                    print(f"Line {line_number} is out of range. Skipping.")
-            
-            # Write the modified lines back to the file
-            with open(config_file_path_new, 'w') as file:
-                file.writelines(lines)
-
-            print("File modified successfully.")
-        
-        except FileNotFoundError:
-            print(f"Error: The file at '{config_file_path}' was not found.")
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+        modify_file_by_lines(config_file_path, config_file_path_new, config_file_modifications)
 
         os.chdir(AGNI_path)
         os.system('./agni.jl res/config/pl2.toml')
