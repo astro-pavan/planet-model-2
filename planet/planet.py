@@ -45,6 +45,9 @@ class planet:
 
         self.find_star_properties = True
 
+    def set_atmosphere_properties(self):
+        pass
+
     def set_host_star(self, instellation, spectral_type):
 
         self.instellation = instellation
@@ -56,6 +59,9 @@ class planet:
         pass
 
     def generate_planet(self):
+        pass
+
+    def integrate_planet(self):
         pass
     
     # print('Generating hydrosphere...')
