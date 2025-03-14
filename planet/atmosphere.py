@@ -1,6 +1,6 @@
 from layer import layer, M_earth, R_earth, G
 from EOS.H2O import eos_water
-from utils import modify_file_by_lines
+from planet.utils import modify_file_by_lines
 
 import netCDF4
 import numpy as np
@@ -62,8 +62,6 @@ class atmo(layer):
         self.g_surface = (G * self.m[0]) / (self.r_surface ** 2)
 
     def radiative_transfer(self):
-        
-        P_initial = np.logspace(1, 5, num=25)
 
         P, T = self.run_AGNI(350, return_PT=True)
 
