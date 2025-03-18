@@ -10,7 +10,7 @@ R_earth = 6371000 # m
 class planet:
 
     def __init__(self):
-
+        
         self.mass = None
         self.radius = None
         
@@ -25,6 +25,7 @@ class planet:
 
         self.find_R, self.find_M, self.find_x_H2O, self.find_x_H = False, False, False, False
         self.find_star_properties, self.find_surface_conditions = False, False
+        self.hydrogen_envelope = False
 
     def set_bulk_properties(self, mass=None, radius=None, water_mass_fraction=None, hydrogen_mass_fraction=None):
 
@@ -39,7 +40,7 @@ class planet:
         self.find_x_H = hydrogen_mass_fraction is None
 
     def set_surface_conditions(self, P_surface, T_surface):
-
+        
         self.P_surface = P_surface
         self.T_surface = T_surface
 
@@ -61,8 +62,13 @@ class planet:
     def generate_planet(self):
         pass
 
-    def integrate_planet(self):
-        pass
+    def integrate_planet(self, M, R, x_H2O, x_H):
+        
+        residual_R = 0
+
+        return residual_R
+
+
     
     # print('Generating hydrosphere...')
     # self.hydrosphere = hydrosphere(mass, mass - water_mass, radius, P_surface, T_surface)
