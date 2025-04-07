@@ -1,5 +1,5 @@
-from layer import layer, M_earth, R_earth
-# from EOS.H2O import eos_water
+from layers.layer import layer, M_earth, R_earth
+from EOS.H2O import eos_water
 from utils import modify_file_by_lines
 
 import os

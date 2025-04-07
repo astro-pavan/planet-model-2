@@ -1,5 +1,5 @@
-from layer import layer, M_earth, R_earth, G
-from planet.utils import modify_file_by_lines
+from layers.layer import layer, M_earth, R_earth, G
+from utils import modify_file_by_lines
 
 import netCDF4
 import numpy as np
@@ -27,13 +27,14 @@ solar_constant = 1360 # W / m^2
 
 class atmosphere(layer):
 
-    def __init__(self, r_bottom, m_bottom, atm_vmrs, F_star, P_surface, T_surface_initial):
+    def __init__(self, r_bottom, m_bottom, atm_vmrs, F_star, spec_type, P_surface, T_surface_initial):
 
         self.m_bottom, self.r_bottom = m_bottom, r_bottom
 
-        self.g_surface = (G * self.m[0]) / (self.r_bottom ** 2)
+        self.g_surface = (G * self.m_bottom) / (self.r_bottom ** 2)
 
         self.instellation = F_star
+        self.host_star_spectral_type = spec_type
         self.P_surface = P_surface
 
         P, T = self.run_AGNI(T_surface_initial, return_PT=True)

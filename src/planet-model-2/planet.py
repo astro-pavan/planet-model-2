@@ -1,8 +1,8 @@
 import numpy as np
 
-from planet.core import core
-from planet.hydrosphere import hydrosphere
-from planet.atmosphere import atmosphere
+from layers.core import core
+from layers.hydrosphere import hydrosphere
+from layers.atmosphere import atmosphere
 
 M_earth = 5.972e24 # kg
 R_earth = 6371000 # m
@@ -24,7 +24,7 @@ class planet:
 
         self.P_surface = P_surface
 
-        self.atmosphere = atmosphere(self.radius, self.mass, atm_vmrs, self.instellation, self.P_surface, T_initial)  
+        self.atmosphere = atmosphere(self.radius, self.mass, atm_vmrs, self.instellation, spec_type, self.P_surface, T_initial)  
 
     def generate_planet(self):
         pass
