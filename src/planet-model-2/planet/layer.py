@@ -19,6 +19,10 @@ class layer:
         self.eos = eos
         self.T_profile = T_profile
 
+        self.r_bottom, self.r_top = np.min(self.r), np.max(self.r)
+        self.m_bottom, self.m_top = np.max(self.m), np.min(self.m)
+        self.layer_mass = self.m_top - self.m_bottom
+
     @classmethod
     def from_hydrostatic_equilibrium(cls, m_top, m_bottom, r_start, P_start, T_start, eos, integrate_down=True, temp_profile='adiabatic'):
         
