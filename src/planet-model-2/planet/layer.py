@@ -8,26 +8,37 @@ R_earth = 6371000 # m
 
 class layer:
 
-    def __init__(self, m_top, m_bottom, r_start, P_start, T_start, eos, integrate_down=True, temp_profile='adiabatic'):
+    def __init__(self, m, r, P, T, rho, eos=None, T_profile=None):
+
+        self.m = m
+        self.r = r
+        self.P = P
+        self.T = T
+        self.rho = rho
+
+        self.eos = eos
+        self.T_profile = T_profile
+
+    @classmethod
+    def from_hydrostatic_equilibrium(cls, m_top, m_bottom, r_start, P_start, T_start, eos, integrate_down=True, temp_profile='adiabatic'):
         
         n = 64
-        self.m = np.linspace(m_bottom, m_top, n)
-        self.r, self.P, self.T, self.rho = np.zeros_like(self.m), np.zeros_like(self.m), np.zeros_like(self.m), np.zeros_like(self.m)
-        self.eos = eos
+        m = np.linspace(m_bottom, m_top, n)
+        r, P, T, rho = np.zeros_like(m), np.zeros_like(m), np.zeros_like(m), np.zeros_like(m)
 
-        self.max_mass_step = 0.01 * M_earth
+        max_mass_step = 0.01 * M_earth
 
         t_span = (m_top, m_bottom) if integrate_down else (m_bottom, m_top)
 
         y0 = [r_start, P_start]
 
         if temp_profile == 'adiabatic':
-            self.T_profile = self.eos.generate_adiabat(P_start, T_start)
+            T_profile = eos.generate_adiabat(P_start, T_start)
         elif temp_profile == 'isothermal':
-            self.T_profile = lambda P: T_start
+            T_profile = lambda P: T_start
         
         def dr_dm(m, r, P):
-            rho = self.eos.rho_PT(P, self.T_profile(P))[0]
+            rho = eos.rho_PT(P, self.T_profile(P))[0]
             return 1 / (4 * np.pi * (r ** 2) * rho)
         
         def dP_dm(m, r, P):
@@ -38,7 +49,7 @@ class layer:
             dP = dP_dm(t, y[0], y[1])
             return (dr, dP)
         
-        solution = solve_ivp(f, t_span, y0, max_step=self.max_mass_step)
+        solution = solve_ivp(f, t_span, y0, max_step=max_mass_step)
 
         m_solution = solution.t
         r_solution = solution.y[0, :]
@@ -58,17 +69,19 @@ class layer:
                 r_interpolator = CubicSpline(m_solution[::-1], r_solution[::-1])
                 log_P_interpolator = CubicSpline(m_solution[::-1], log_P_solution[::-1])
 
-            self.r = r_interpolator(self.m)
-            self.P = 10 ** log_P_interpolator(self.m)
+            r = r_interpolator(m)
+            P = 10 ** log_P_interpolator(m)
 
         else:
             
-            self.m = m_solution
-            self.r = r_solution
-            self.P = P_solution[positive_mask]
+            m = m_solution
+            r = r_solution
+            P = P_solution[positive_mask]
 
-        self.T = self.T_profile(self.P) if temp_profile == 'adiabatic' else np.full_like(self.m, T_start)
-        self.rho = self.eos.rho_PT(self.P, self.T)
+        T = T_profile(self.P) if temp_profile == 'adiabatic' else np.full_like(m, T_start)
+        rho = eos.rho_PT(self.P, self.T)
+
+        return cls(m, r, P, T, rho, eos, T_profile)
 
 
 if __name__ == '__main__':
