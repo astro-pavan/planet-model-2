@@ -5,6 +5,7 @@ import numpy as np
 G = 6.674e-11 # m^3 kg^-1 s^-2
 M_earth = 5.972e24 # kg
 R_earth = 6371000 # m 
+ideal_gas_constant = 8.314 # J K^-1 mol^-1
 
 class layer:
 

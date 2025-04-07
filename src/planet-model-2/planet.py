@@ -4,6 +4,8 @@ from layers.core import core
 from layers.hydrosphere import hydrosphere
 from layers.atmosphere import atmosphere
 
+from utils import modify_file_by_lines
+
 M_earth = 5.972e24 # kg
 R_earth = 6371000 # m
 
@@ -24,7 +26,11 @@ class planet:
 
         self.P_surface = P_surface
 
-        self.atmosphere = atmosphere(self.radius, self.mass, atm_vmrs, self.instellation, spec_type, self.P_surface, T_initial)  
+        self.atmosphere = atmosphere(self.radius, self.mass, atm_vmrs, self.instellation, spec_type, self.P_surface, T_initial)
+
+
+    def run_Magarathea(self, T_surface):
+        pass
 
     def generate_planet(self):
         pass
@@ -46,6 +52,6 @@ class planet:
 
 if __name__ == '__main__':
 
-    test_planet = planet(1, 1.1, 1, 1e5, 300, 'G2', '')
+    test_planet = planet(1 * M_earth, 1.1 * R_earth, 1, 1e5, 300, 'G2', '')
 
         

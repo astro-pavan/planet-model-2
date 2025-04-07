@@ -1,4 +1,4 @@
-from layers.layer import layer, M_earth, R_earth, G
+from layers.layer import layer, M_earth, R_earth, G, ideal_gas_constant
 from utils import modify_file_by_lines
 
 import netCDF4
@@ -37,12 +37,21 @@ class atmosphere(layer):
         self.host_star_spectral_type = spec_type
         self.P_surface = P_surface
 
-        P, T = self.run_AGNI(T_surface_initial, return_PT=True)
+        P, T, z, mmw = self.run_AGNI(T_surface_initial)
 
-        new_P = np.logspace(1, 5, num=60)
-        new_T = CubicSpline(P, T)(new_P)
+        # new_P = np.logspace(1, 5, num=60)
+        # new_T = CubicSpline(P, T)(new_P)
+        # P, T, z = self.run_AGNI((new_P, new_T), high_spectral_res=True)
 
-        self.run_AGNI((new_P, new_T), high_spectral_res=True)
+        r = z + self.r_bottom
+
+        rho = (P * mmw) / (ideal_gas_constant * T)
+
+        dr = - np.diff(r, prepend=r[0])
+        dm = (4 * np.pi * (r ** 2) * rho) * dr
+        m = (np.sum(dm) - np.cumsum(dm)) + m_bottom
+
+        super().__init__(m, r, P, T, rho)
 
 
 
@@ -64,7 +73,7 @@ class atmosphere(layer):
             26 : f'    input_star      = "res/stellar_spectra/{spectral_types[self.host_star_spectral_type]}"              # Path to stellar spectrum.',
             56 : f'    solvers         = ["levenberg"]                        # Ordered list of solvers to apply (see wiki).',
             25 : f'    input_sf        = "res/spectral_files/Dayspring/{n_spectral_bands}/Dayspring.sf"   # Path to SOCRATES spectral file.',
-            32 : '    vmr_dict        = { H2=1.0 }               # Volatile volume mixing ratios (=mole fractions).',
+            32 : '    vmr_dict        = { N2=0.99, CO2 = 0.01 }               # Volatile volume mixing ratios (=mole fractions).',
             60 : '    easy_start      = true                     # Initially down-scale convective/condensation fluxes, if initial guess is poor.',
             11 : '    s0_fact         = 1.0            # Stellar flux scale factor which accounts for planetary rotation (c.f. Cronin+13).',
             14 : '    albedo_s        = 0.5               # Grey surface albedo when material=greybody.'
@@ -109,9 +118,10 @@ class atmosphere(layer):
 
         P = np.array(atm_nc['p'])
         T = np.array(atm_nc['tmp'])
+        z = np.array(atm_nc['z'])
+        mmw = np.array(atm_nc['mmw'])
 
         atm_nc.close()
-
-        if return_PT:
-            return (P, T)
+            
+        return P, T, z, mmw
 
