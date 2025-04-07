@@ -1,68 +1,35 @@
 import numpy as np
 
-from core import core
-from hydrosphere import hydrosphere
-from atmosphere import atmo
+from planet.core import core
+from planet.hydrosphere import hydrosphere
+from planet.atmosphere import atmosphere
 
 M_earth = 5.972e24 # kg
-R_earth = 6371000 # m 
+R_earth = 6371000 # m
+
+magrathea_path = '/data/pt426/Magrathea'
 
 class planet:
 
-    def __init__(self, M, R, F_star, atm_vmrs):
+    def __init__(self, M, R, F_star, P_surface, T_initial, spec_type, atm_vmrs):
         
-        self.mass = None
-        self.radius = None
+        self.mass = M
+        self.radius = R
         
         self.water_mass_fraction = None
         self.hydrogen_mass_fraction = None
 
-        self.instellation = None
-        self.host_star_spectral_type = None
+        self.instellation = F_star
+        self.host_star_spectral_type = spec_type
 
-        self.P_surface = None
-        self.T_surface = None
-
-        self.find_R, self.find_M, self.find_x_H2O, self.find_x_H = False, False, False, False
-        self.find_star_properties, self.find_surface_conditions = False, False
-        self.hydrogen_envelope = False
-
-    def set_bulk_properties(self, mass=None, radius=None, water_mass_fraction=None, hydrogen_mass_fraction=None):
-
-        self.mass = mass
-        self.radius = radius
-        self.water_mass_fraction = water_mass_fraction
-        self.hydrogen_mass_fraction = hydrogen_mass_fraction
-
-        self.find_R = radius is None
-        self.find_M = mass is None
-        self.find_x_H2O = water_mass_fraction is None
-        self.find_x_H = hydrogen_mass_fraction is None
-
-    def set_surface_conditions(self, P_surface, T_surface):
-        
         self.P_surface = P_surface
-        self.T_surface = T_surface
 
-        self.find_star_properties = True
-
-    def set_atmosphere_properties(self):
-        pass
-
-    def set_host_star(self, instellation, spectral_type):
-
-        self.instellation = instellation
-        self.host_star_spectral_type = spectral_type
-
-        self.find_surface_conditions = True
-
-    def set_chemical_composition(self):
-        pass
+        self.atmosphere = atmosphere(self.radius, self.mass, atm_vmrs, self.instellation, self.P_surface, T_initial)  
 
     def generate_planet(self):
         pass
 
-    def integrate_planet(self, M, R, x_H2O, x_H):
+    def integrate_planet(self, M, R, x_H2O):
         
         residual_R = 0
 
@@ -79,8 +46,6 @@ class planet:
 
 if __name__ == '__main__':
 
-    test_planet = planet(5 * M_earth, 2 * R_earth, 0.1, 1e5, 300, 'H2O', instellation=0.8)
-
-    test_planet.atmosphere.run_AGNI()
+    test_planet = planet(1, 1.1, 1, 1e5, 300, 'G2', '')
 
         
