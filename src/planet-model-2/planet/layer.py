@@ -38,7 +38,7 @@ class layer:
             T_profile = lambda P: T_start
         
         def dr_dm(m, r, P):
-            rho = eos.rho_PT(P, self.T_profile(P))[0]
+            rho = eos.rho_PT(P, T_profile(P))[0]
             return 1 / (4 * np.pi * (r ** 2) * rho)
         
         def dP_dm(m, r, P):
@@ -78,8 +78,8 @@ class layer:
             r = r_solution
             P = P_solution[positive_mask]
 
-        T = T_profile(self.P) if temp_profile == 'adiabatic' else np.full_like(m, T_start)
-        rho = eos.rho_PT(self.P, self.T)
+        T = T_profile(P) if temp_profile == 'adiabatic' else np.full_like(m, T_start)
+        rho = eos.rho_PT(P, T)
 
         return cls(m, r, P, T, rho, eos, T_profile)
 
