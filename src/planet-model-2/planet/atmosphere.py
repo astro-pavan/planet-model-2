@@ -1,5 +1,4 @@
 from layer import layer, M_earth, R_earth, G
-from EOS.H2O import eos_water
 from planet.utils import modify_file_by_lines
 
 import netCDF4
@@ -26,49 +25,25 @@ spectral_types = {
 
 solar_constant = 1360 # W / m^2
 
-class atmo(layer):
+class atmosphere(layer):
 
-    def __init__(self, m_bottom, r_bottom, P_surface, T_surface, atmosphere_type, instellation=1, spectral_type='G2', P_min=1):
-        
-        self.eos = None
+    def __init__(self, r_bottom, m_bottom, atm_vmrs, F_star, P_surface, T_surface_initial):
 
-        if atmosphere_type == 'HHe':
-            pass
-        elif atmosphere_type == 'H2O':
-            self.eos = eos_water()
-        elif atmosphere_type == 'CO2':
-            pass
-        elif atmosphere_type == 'N2':
-            pass
+        self.m_bottom, self.r_bottom = m_bottom, r_bottom
 
-        self.eos.make_interpolators()
-        self.max_mass_step = None
+        self.g_surface = (G * self.m[0]) / (self.r_bottom ** 2)
 
-        super().__init__(m_bottom * 1.1, m_bottom, r_bottom, P_surface, T_surface, self.eos, integrate_down=False, temp_profile='isothermal')
+        self.instellation = F_star
+        self.P_surface = P_surface
 
-        P_mask = self.P > P_min
-
-        self.m = self.m[P_mask]
-        self.r = self.r[P_mask]
-        self.P = self.P[P_mask]
-        self.T = self.T[P_mask]
-        self.rho = self.rho[P_mask]
-
-        self.instellation = instellation
-        self.host_star_spectral_type = spectral_type
-
-        self.P_surface = self.P[0]
-        self.r_surface = self.r[0]
-        self.g_surface = (G * self.m[0]) / (self.r_surface ** 2)
-
-    def radiative_transfer(self):
-
-        P, T = self.run_AGNI(350, return_PT=True)
+        P, T = self.run_AGNI(T_surface_initial, return_PT=True)
 
         new_P = np.logspace(1, 5, num=60)
         new_T = CubicSpline(P, T)(new_P)
 
         self.run_AGNI((new_P, new_T), high_spectral_res=True)
+
+
 
     def run_AGNI(self, PT_initial, high_spectral_res=False, return_PT=False):
 
@@ -82,7 +57,7 @@ class atmo(layer):
             5 : 'title = "pl2"',
             55 : '    solution_type   = 3                         # Solution type (see wiki).',
             30 : f'    p_surf          = {self.P_surface / 1e5:.2f}                     # Total surface pressure [bar].',
-            15 : f'    radius          = {self.r_surface:.3e}            # Planet radius at the surface [m].',
+            15 : f'    radius          = {self.r_bottom:.3e}            # Planet radius at the surface [m].',
             16 : f'    gravity         = {self.g_surface:.2e}              # Gravitational acceleration at the surface [m s-2]',
             9 : f'    instellation    = {self.instellation * solar_constant:.1f}           # Stellar flux at planet\'s orbital distance [W m-2].',
             26 : f'    input_star      = "res/stellar_spectra/{spectral_types[self.host_star_spectral_type]}"              # Path to stellar spectrum.',
