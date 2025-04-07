@@ -9,7 +9,7 @@ R_earth = 6371000 # m
 
 class planet:
 
-    def __init__(self):
+    def __init__(self, M, R, F_star, atm_vmrs):
         
         self.mass = None
         self.radius = None
