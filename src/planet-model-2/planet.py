@@ -7,9 +7,7 @@ from layers.hydrosphere import hydrosphere
 from layers.atmosphere import atmosphere
 
 from utils import modify_file_by_lines
-
-M_earth = 5.972e24 # kg
-R_earth = 6371000 # m
+from constants import M_EARTH, R_EARTH
 
 magrathea_path = '/data/pt426/Magrathea'
 
@@ -40,14 +38,14 @@ class planet:
 
         df_core, df_hydro = self.run_Magarathea(self.T_surface)
 
-        m_core = np.array(df_core['M (earth)']) * M_earth
-        r_core = np.array(df_core['Radius (earth)']) * R_earth
+        m_core = np.array(df_core['M (earth)']) * M_EARTH
+        r_core = np.array(df_core['Radius (earth)']) * R_EARTH
         P_core = np.array(df_core['P (GPa)']) / 1e9
         T_core = np.array(df_core['T (K)'])  
         rho_core =  np.array(df_core['Density (g cm^-3)']) * 1e3
 
-        m_hydro = np.array(df_hydro['M (earth)']) * M_earth
-        r_hydro = np.array(df_hydro['Radius (earth)']) * R_earth
+        m_hydro = np.array(df_hydro['M (earth)']) * M_EARTH
+        r_hydro = np.array(df_hydro['Radius (earth)']) * R_EARTH
         P_hydro = np.array(df_hydro['P (GPa)']) / 1e9
         T_hydro = np.array(df_hydro['T (K)'])
         rho_hydro =  np.array(df_hydro['Density (g cm^-3)']) * 1e3
@@ -69,7 +67,7 @@ class planet:
         wd = os.getcwd()
 
         with open(input_file_path, 'w') as file:
-            file.writelines(['M (Earth-masses) 	R (Earth-radii)\n', f'{self.mass / M_earth:.2f} {self.radius / R_earth:.2f}'])
+            file.writelines(['M (Earth-masses) 	R (Earth-radii)\n', f'{self.mass / M_EARTH:.2f} {self.radius / R_EARTH:.2f}'])
 
         mode4_config_file_modifications = {
             37 : f'P_surface={self.P_surface * 10:.1e}				# The pressure level that the broad band optical transit radius probes (in microbar)',
@@ -115,27 +113,8 @@ class planet:
         return df_core, df_hydro
 
 
-
-    def generate_planet(self):
-        pass
-
-    def integrate_planet(self, M, R, x_H2O):
-        
-        residual_R = 0
-
-        return residual_R
-
-
-    
-    # print('Generating hydrosphere...')
-    # self.hydrosphere = hydrosphere(mass, mass - water_mass, radius, P_surface, T_surface)
-
-    # print('Generating atmosphere...')
-    # self.atmosphere = atmo(mass, radius, P_surface, T_surface, 'H2O', instellation, star_spectral_type)
-
-
 if __name__ == '__main__':
 
-    test_planet = planet(1.1 * M_earth, 1.1 * R_earth, 1, 1e5, 300, 'G2', '')
+    test_planet = planet(1.1 * M_EARTH, 1.1 * R_EARTH, 1, 1e5, 300, 'G2', '')
 
         

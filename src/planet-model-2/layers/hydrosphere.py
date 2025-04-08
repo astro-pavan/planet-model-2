@@ -1,4 +1,4 @@
-from layers.layer import layer, M_earth, R_earth
+from layers.layer import layer, M_Earth, R_EARTH
 from EOS.H2O import eos_water
 from utils import modify_file_by_lines
 
@@ -27,5 +27,5 @@ class hydrosphere(layer):
 
 if __name__ == '__main__':
 
-    test = hydrosphere(M_earth * 5, M_earth * 4, R_earth * 2, 1e5, 300)
+    test = hydrosphere(M_Earth * 5, M_Earth * 4, R_EARTH * 2, 1e5, 300)
     test.calculate_CO2()
