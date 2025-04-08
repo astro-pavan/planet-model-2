@@ -11,21 +11,7 @@ PHREEQC_path = '/data/pt426/phreeqc/bin'
 class hydrosphere(layer):
     
     def calculate_CO2(self):
-
-        input_file_modifications = {
-            4 : f'temp        60.0        # Temperature in degrees Celsius [1, 2]',
-            5 : f'pressure    1.5         # Pressure in atmospheres [2]'
-        }
-
-        input_file_path = 'templates/phreeqc_co2_equilibrium_input_template.txt'
-        input_file_path_new = f'{PHREEQC_path}/input'
-
-        modify_file_by_lines(input_file_path, input_file_path_new, input_file_modifications)
-
-        wd = os.getcwd()
-        os.chdir(PHREEQC_path)
-        os.system('./phreeqc input')
-        os.chdir(wd)
+        pass
 
 
 def equilbriate_CO2(P, T, pH_initial, C_dissolved_initial, P_CO2_initial):
