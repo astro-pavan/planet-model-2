@@ -1,4 +1,4 @@
-from layers.layer import layer, M_earth, R_earth, G, ideal_gas_constant
+from layers.layer import layer, M_Earth, R_EARTH, G, IDEAL_GAS_CONSTANT
 from utils import modify_file_by_lines
 
 import netCDF4
@@ -45,7 +45,7 @@ class atmosphere(layer):
 
         r = z + self.r_bottom
 
-        rho = (P * mmw) / (ideal_gas_constant * T)
+        rho = (P * mmw) / (IDEAL_GAS_CONSTANT * T)
 
         dr = - np.diff(r, prepend=r[0])
         dm = (4 * np.pi * (r ** 2) * rho) * dr

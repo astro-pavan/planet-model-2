@@ -2,10 +2,7 @@ from scipy.integrate import solve_ivp
 from scipy.interpolate import CubicSpline
 import numpy as np
 
-G = 6.674e-11 # m^3 kg^-1 s^-2
-M_earth = 5.972e24 # kg
-R_earth = 6371000 # m 
-ideal_gas_constant = 8.314 # J K^-1 mol^-1
+from constants import G, M_EARTH, R_EARTH, IDEAL_GAS_CONSTANT
 
 class layer:
 
@@ -31,7 +28,7 @@ class layer:
         m = np.linspace(m_bottom, m_top, n)
         r, P, T, rho = np.zeros_like(m), np.zeros_like(m), np.zeros_like(m), np.zeros_like(m)
 
-        max_mass_step = 0.01 * M_earth
+        max_mass_step = 0.01 * M_EARTH
 
         t_span = (m_top, m_bottom) if integrate_down else (m_bottom, m_top)
 
@@ -96,4 +93,4 @@ if __name__ == '__main__':
     eos_h2o = eos_water()
     eos_h2o.make_interpolators()
 
-    water_layer = layer(M_earth, 0.8 * M_earth, R_earth, 1e5, 300, eos_h2o)
+    water_layer = layer(M_EARTH, 0.8 * M_EARTH, R_EARTH, 1e5, 300, eos_h2o)
