@@ -5,6 +5,9 @@ SOLUTION 1 Ocean
     pressure    1.5         # Pressure in atmospheres [2]
     pH          8.0         # Initial pH
     units       mmol/kgw    # Units for concentration [3]
+    Ca          10.0        # Calcium concentration [3]
+    Na          450.0       # Sodium concentration [3]
+    Cl          470.0       # Chloride concentration [3]
     C           0.0         # Total dissolved carbon [4]
 
 EQUILIBRIUM_PHASES 1 Atmosphere
