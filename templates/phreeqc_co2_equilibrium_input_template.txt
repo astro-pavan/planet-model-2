@@ -10,4 +10,15 @@ SOLUTION 1 Ocean
 EQUILIBRIUM_PHASES 1 Atmosphere
     CO2(g)      -3.5        10.0    # partial pressure in log(atm) and number of moles of CO2
 
+SELECTED_OUTPUT
+    -file output.txt
+    -equilibrium_phases CO2(g)
+    -simulation false
+    -solution false
+    -distance false
+    -pH true
+    -alkalinity true
+    -percent_error true
+    -totals C O H # Example totals
+
 END
