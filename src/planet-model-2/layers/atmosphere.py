@@ -1,5 +1,6 @@
-from layers.layer import layer, M_Earth, R_EARTH, G, IDEAL_GAS_CONSTANT
+from layers.layer import layer
 from utils import modify_file_by_lines
+from constants import M_EARTH, R_EARTH, G, IDEAL_GAS_CONSTANT
 
 import netCDF4
 import numpy as np
