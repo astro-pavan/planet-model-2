@@ -1,9 +1,10 @@
 import numpy as np
 import os
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from layers.core import core
-from layers.hydrosphere import hydrosphere
+from layers.hydrosphere import hydrosphere, phreeqc_CO2_equilibrium_phase
 from layers.atmosphere import atmosphere
 
 from utils import modify_file_by_lines
@@ -17,9 +18,6 @@ class planet:
         
         self.mass = M
         self.radius = R
-        
-        self.water_mass_fraction = None
-        self.hydrogen_mass_fraction = None
 
         self.instellation = F_star
         self.host_star_spectral_type = spec_type
@@ -30,9 +28,9 @@ class planet:
 
         self.atmosphere = atmosphere(self.radius, self.mass, atm_vmrs, self.instellation, spec_type, self.P_surface, T_initial)
 
-        print('ATMOSPHERE GENERATED')
-
         self.T_surface = self.atmosphere.T[-1]
+
+        print('ATMOSPHERE GENERATED')
 
         print('GENERATING PLANET...')
 
@@ -40,13 +38,13 @@ class planet:
 
         m_core = np.array(df_core['M (earth)']) * M_EARTH
         r_core = np.array(df_core['Radius (earth)']) * R_EARTH
-        P_core = np.array(df_core['P (GPa)']) / 1e9
+        P_core = np.array(df_core['P (GPa)']) * 1e9
         T_core = np.array(df_core['T (K)'])  
         rho_core =  np.array(df_core['Density (g cm^-3)']) * 1e3
 
         m_hydro = np.array(df_hydro['M (earth)']) * M_EARTH
         r_hydro = np.array(df_hydro['Radius (earth)']) * R_EARTH
-        P_hydro = np.array(df_hydro['P (GPa)']) / 1e9
+        P_hydro = np.array(df_hydro['P (GPa)']) * 1e9
         T_hydro = np.array(df_hydro['T (K)'])
         rho_hydro =  np.array(df_hydro['Density (g cm^-3)']) * 1e3
 
@@ -63,6 +61,11 @@ class planet:
         input_file_path = f'{magrathea_path}/input/MR.txt'
         mode4_output_file_path = f'{magrathea_path}/result/outputplanetsols.txt'
         mode0_output_file_path = f'{magrathea_path}/result/pl2.txt'
+
+        try:
+            os.remove(mode0_output_file_path)
+        except FileNotFoundError:
+            pass
 
         wd = os.getcwd()
 
@@ -85,9 +88,9 @@ class planet:
         R_core_ocean_boundary = mode4_results_table.at[0, "RMantle"]
 
         mode0_config_file_modifications = {
-            12: f'mass_of_core={mode4_results_table.at[0, "MCore"]:.2f}	# Earth Masses in core',
-            13: f'mass_of_mantle={mode4_results_table.at[0, "MMantle"]:.2f}	# Earth Masses in mantle',
-            14: f'mass_of_hydro={mode4_results_table.at[0, "MWater"]:.2f} # Earth Masses in hydrosphere',
+            12: f'mass_of_core={mode4_results_table.at[0, "MCore"]:.4f}	# Earth Masses in core',
+            13: f'mass_of_mantle={mode4_results_table.at[0, "MMantle"]:.4f}	# Earth Masses in mantle',
+            14: f'mass_of_hydro={mode4_results_table.at[0, "MWater"]:.4f} # Earth Masses in hydrosphere',
             15: f'mass_of_atm=0		# Earth Masses in atmosphere',
             16: f'surface_temp={T_surface:.0f}	# Kelvin, top of planet where enclosed mass equals total mass',
             21: f'output_file="./result/pl2.txt"	# Output file name & location',
@@ -111,10 +114,25 @@ class planet:
         df_hydro = df[~core_mask]
 
         return df_core, df_hydro
+    
+    def plot_PT(self):
+        plt.plot(self.atmosphere.T, self.atmosphere.P)
+        plt.plot(self.hydrosphere.T, self.hydrosphere.P)
+        plt.plot(self.core.T, self.core.P)
+
+        plt.yscale('log')
+        plt.savefig('PT.png')
+
 
 
 if __name__ == '__main__':
 
-    test_planet = planet(1.1 * M_EARTH, 1.1 * R_EARTH, 1, 1e5, 300, 'G2', '')
+    P = 1e5
+    vf_CO2 = 0.01
+    phreeqc_CO2_equilibrium_phase(P, 300, 8, 0, P*vf_CO2)
+
+    # test_planet = planet(1 * M_EARTH, 1 * R_EARTH, 1, 1e5, 300, 'G2', '')
+    # test_planet.plot_PT()
+    # test_planet.hydrosphere.calculate_CO2()
 
         
