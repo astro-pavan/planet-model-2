@@ -1,6 +1,5 @@
-from layer import layer, M_earth, R_earth, G
-from EOS.H2O import eos_water
-from planet.utils import modify_file_by_lines
+from layers.layer import layer, M_earth, R_earth, G, ideal_gas_constant
+from utils import modify_file_by_lines
 
 import netCDF4
 import numpy as np
@@ -26,49 +25,35 @@ spectral_types = {
 
 solar_constant = 1360 # W / m^2
 
-class atmo(layer):
+class atmosphere(layer):
 
-    def __init__(self, m_bottom, r_bottom, P_surface, T_surface, atmosphere_type, instellation=1, spectral_type='G2', P_min=1):
-        
-        self.eos = None
+    def __init__(self, r_bottom, m_bottom, atm_vmrs, F_star, spec_type, P_surface, T_surface_initial):
 
-        if atmosphere_type == 'HHe':
-            pass
-        elif atmosphere_type == 'H2O':
-            self.eos = eos_water()
-        elif atmosphere_type == 'CO2':
-            pass
-        elif atmosphere_type == 'N2':
-            pass
+        self.m_bottom, self.r_bottom = m_bottom, r_bottom
 
-        self.eos.make_interpolators()
-        self.max_mass_step = None
+        self.g_surface = (G * self.m_bottom) / (self.r_bottom ** 2)
 
-        super().__init__(m_bottom * 1.1, m_bottom, r_bottom, P_surface, T_surface, self.eos, integrate_down=False, temp_profile='isothermal')
+        self.instellation = F_star
+        self.host_star_spectral_type = spec_type
+        self.P_surface = P_surface
 
-        P_mask = self.P > P_min
+        P, T, z, mmw = self.run_AGNI(T_surface_initial)
 
-        self.m = self.m[P_mask]
-        self.r = self.r[P_mask]
-        self.P = self.P[P_mask]
-        self.T = self.T[P_mask]
-        self.rho = self.rho[P_mask]
+        # new_P = np.logspace(1, 5, num=60)
+        # new_T = CubicSpline(P, T)(new_P)
+        # P, T, z = self.run_AGNI((new_P, new_T), high_spectral_res=True)
 
-        self.instellation = instellation
-        self.host_star_spectral_type = spectral_type
+        r = z + self.r_bottom
 
-        self.P_surface = self.P[0]
-        self.r_surface = self.r[0]
-        self.g_surface = (G * self.m[0]) / (self.r_surface ** 2)
+        rho = (P * mmw) / (ideal_gas_constant * T)
 
-    def radiative_transfer(self):
+        dr = - np.diff(r, prepend=r[0])
+        dm = (4 * np.pi * (r ** 2) * rho) * dr
+        m = (np.sum(dm) - np.cumsum(dm)) + m_bottom
 
-        P, T = self.run_AGNI(350, return_PT=True)
+        super().__init__(m, r, P, T, rho)
 
-        new_P = np.logspace(1, 5, num=60)
-        new_T = CubicSpline(P, T)(new_P)
 
-        self.run_AGNI((new_P, new_T), high_spectral_res=True)
 
     def run_AGNI(self, PT_initial, high_spectral_res=False, return_PT=False):
 
@@ -82,13 +67,13 @@ class atmo(layer):
             5 : 'title = "pl2"',
             55 : '    solution_type   = 3                         # Solution type (see wiki).',
             30 : f'    p_surf          = {self.P_surface / 1e5:.2f}                     # Total surface pressure [bar].',
-            15 : f'    radius          = {self.r_surface:.3e}            # Planet radius at the surface [m].',
+            15 : f'    radius          = {self.r_bottom:.3e}            # Planet radius at the surface [m].',
             16 : f'    gravity         = {self.g_surface:.2e}              # Gravitational acceleration at the surface [m s-2]',
             9 : f'    instellation    = {self.instellation * solar_constant:.1f}           # Stellar flux at planet\'s orbital distance [W m-2].',
             26 : f'    input_star      = "res/stellar_spectra/{spectral_types[self.host_star_spectral_type]}"              # Path to stellar spectrum.',
             56 : f'    solvers         = ["levenberg"]                        # Ordered list of solvers to apply (see wiki).',
             25 : f'    input_sf        = "res/spectral_files/Dayspring/{n_spectral_bands}/Dayspring.sf"   # Path to SOCRATES spectral file.',
-            32 : '    vmr_dict        = { H2=1.0 }               # Volatile volume mixing ratios (=mole fractions).',
+            32 : '    vmr_dict        = { N2=0.99, CO2 = 0.01 }               # Volatile volume mixing ratios (=mole fractions).',
             60 : '    easy_start      = true                     # Initially down-scale convective/condensation fluxes, if initial guess is poor.',
             11 : '    s0_fact         = 1.0            # Stellar flux scale factor which accounts for planetary rotation (c.f. Cronin+13).',
             14 : '    albedo_s        = 0.5               # Grey surface albedo when material=greybody.'
@@ -133,9 +118,10 @@ class atmo(layer):
 
         P = np.array(atm_nc['p'])
         T = np.array(atm_nc['tmp'])
+        z = np.array(atm_nc['z'])
+        mmw = np.array(atm_nc['mmw'])
 
         atm_nc.close()
-
-        if return_PT:
-            return (P, T)
+            
+        return P, T, z, mmw
 
