@@ -38,7 +38,7 @@ class atmosphere(layer):
         self.host_star_spectral_type = spec_type
         self.P_surface = P_surface
 
-        P, T, z, mmw = self.run_AGNI(T_surface_initial)
+        P, T, z, mmw, vmrs = self.run_AGNI(T_surface_initial)
 
         # new_P = np.logspace(1, 5, num=60)
         # new_T = CubicSpline(P, T)(new_P)
@@ -53,10 +53,11 @@ class atmosphere(layer):
         m = (np.sum(dm) - np.cumsum(dm)) + m_bottom
 
         super().__init__(m, r, P, T, rho)
+        self.vmrs = vmrs
 
 
 
-    def run_AGNI(self, PT_initial, high_spectral_res=False, return_PT=False):
+    def run_AGNI(self, PT_initial, high_spectral_res=False, return_tuple=False):
 
         wd = os.getcwd()
         config_file_path = f'{AGNI_path}/res/config/default.toml'
@@ -74,7 +75,7 @@ class atmosphere(layer):
             26 : f'    input_star      = "res/stellar_spectra/{spectral_types[self.host_star_spectral_type]}"              # Path to stellar spectrum.',
             56 : f'    solvers         = ["levenberg"]                        # Ordered list of solvers to apply (see wiki).',
             25 : f'    input_sf        = "res/spectral_files/Dayspring/{n_spectral_bands}/Dayspring.sf"   # Path to SOCRATES spectral file.',
-            32 : '    vmr_dict        = { N2=0.99, CO2 = 0.01 }               # Volatile volume mixing ratios (=mole fractions).',
+            32 : '    vmr_dict        = { N2=0.99, CO2 = 0.01, H2O = 0.00 }               # Volatile volume mixing ratios (=mole fractions).',
             60 : '    easy_start      = true                     # Initially down-scale convective/condensation fluxes, if initial guess is poor.',
             11 : '    s0_fact         = 1.0            # Stellar flux scale factor which accounts for planetary rotation (c.f. Cronin+13).',
             14 : '    albedo_s        = 0.5               # Grey surface albedo when material=greybody.'
@@ -117,6 +118,13 @@ class atmosphere(layer):
 
         # print(atm_nc.variables.keys())
 
+        x_gas = np.array(atm_nc['x_gas'])
+        vmrs = {}
+
+        for i, l in enumerate(atm_nc['gases']):
+            species = b''.join(l).decode('utf-8').rstrip()
+            vmrs[species] = x_gas[:, i]
+
         P = np.array(atm_nc['p'])
         T = np.array(atm_nc['tmp'])
         z = np.array(atm_nc['z'])
@@ -124,5 +132,5 @@ class atmosphere(layer):
 
         atm_nc.close()
             
-        return P, T, z, mmw
+        return P, T, z, mmw, vmrs
 
