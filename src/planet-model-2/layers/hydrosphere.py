@@ -10,7 +10,7 @@ PHREEQC_path = '/data/pt426/phreeqc/bin'
 
 class hydrosphere(layer):
     
-    def calculate_CO2(self):
+    def column_density(self):
         pass
 
 
@@ -18,7 +18,7 @@ def equilbriate_CO2(P, T, pH_initial, C_dissolved_initial, P_CO2_initial):
     pass
 
 
-def phreeqc_CO2_equilibrium_phase(P, T, pH, C_dissolved, P_CO2):
+def phreeqc_CO2_equilibrium_phase(P, T, pH, C_dissolved, P_CO2, P_H2O, m_water=1, mol_CO2=10, mol_H2O=10):
     
     input_template_file_path = 'templates/phreeqc_co2_equilibrium_input_template.txt'
     input_file_path_new = f'{PHREEQC_path}/input'
@@ -29,7 +29,8 @@ def phreeqc_CO2_equilibrium_phase(P, T, pH, C_dissolved, P_CO2):
             5 : f'    pressure    {P / EARTH_ATM:.2f}         # Pressure in atmospheres [2]',
             6 : f'    pH          {pH:.1f}         # Initial pH',
             8 : f'    C           {C_dissolved:.2f}         # Total dissolved carbon [4]',
-            11 : f'    CO2(g)      {np.log10(P_CO2 / EARTH_ATM)}        10.0    # partial pressure in log(atm) and number of moles of CO2'
+            9 : f'    water       {m_water:.2f}         # mass of water in kg',
+            12 : f'    CO2(g)      {np.log10(P_CO2 / EARTH_ATM)}        {mol_CO2:.2f}    # partial pressure in log(atm) and number of moles of CO2',
         }
 
     modify_file_by_lines(input_template_file_path, input_file_path_new, input_file_modifications)
