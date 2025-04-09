@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from layers.core import core
 from layers.hydrosphere import hydrosphere, phreeqc_CO2_equilibrium_phase
 from layers.atmosphere import atmosphere
+from surface import surface
 
 from utils import modify_file_by_lines
 from constants import M_EARTH, R_EARTH
@@ -22,25 +23,15 @@ class planet:
         self.instellation = F_star
         self.host_star_spectral_type = spec_type
 
-        self.P_surface = P_surface
-
         print('GENERATING ATMOSPHERE...')
 
-        self.atmosphere = atmosphere(self.radius, self.mass, atm_vmrs, self.instellation, spec_type, self.P_surface, T_initial)
-
-        self.T_surface = self.atmosphere.T[-1]
+        self.atmosphere = atmosphere(self.radius, self.mass, atm_vmrs, self.instellation, spec_type, P_surface, T_initial)
 
         print('ATMOSPHERE GENERATED')
 
         print('GENERATING PLANET...')
 
-        df_core, df_hydro = self.run_Magarathea(self.T_surface)
-
-        m_core = np.array(df_core['M (earth)']) * M_EARTH
-        r_core = np.array(df_core['Radius (earth)']) * R_EARTH
-        P_core = np.array(df_core['P (GPa)']) * 1e9
-        T_core = np.array(df_core['T (K)'])  
-        rho_core =  np.array(df_core['Density (g cm^-3)']) * 1e3
+        df_core, df_hydro = self.run_Magarathea(P_surface, self.atmosphere.T[-1])
 
         m_hydro = np.array(df_hydro['M (earth)']) * M_EARTH
         r_hydro = np.array(df_hydro['Radius (earth)']) * R_EARTH
@@ -48,13 +39,20 @@ class planet:
         T_hydro = np.array(df_hydro['T (K)'])
         rho_hydro =  np.array(df_hydro['Density (g cm^-3)']) * 1e3
 
-        self.core = core(m_core, r_core, P_core, T_core, rho_core)
-        self.hydrosphere = hydrosphere(m_hydro, r_hydro, P_hydro, T_hydro, rho_hydro)
+        m_core = np.array(df_core['M (earth)']) * M_EARTH
+        r_core = np.array(df_core['Radius (earth)']) * R_EARTH
+        P_core = np.array(df_core['P (GPa)']) * 1e9
+        T_core = np.array(df_core['T (K)'])  
+        rho_core =  np.array(df_core['Density (g cm^-3)']) * 1e3
 
+        self.hydrosphere = hydrosphere(m_hydro, r_hydro, P_hydro, T_hydro, rho_hydro)
+        self.core = core(m_core, r_core, P_core, T_core, rho_core)
+        self.surface = surface(self.hydrosphere, self.atmosphere)
+        
         print('PLANET GENERATED')
 
 
-    def run_Magarathea(self, T_surface):
+    def run_Magarathea(self, P_surface, T_surface):
         
         mode0_config_file_path = f'{magrathea_path}/run/mode0.cfg'
         mode4_config_file_path = f'{magrathea_path}/run/mode4.cfg'
@@ -73,7 +71,7 @@ class planet:
             file.writelines(['M (Earth-masses) 	R (Earth-radii)\n', f'{self.mass / M_EARTH:.2f} {self.radius / R_EARTH:.2f}'])
 
         mode4_config_file_modifications = {
-            37 : f'P_surface={self.P_surface * 10:.1e}				# The pressure level that the broad band optical transit radius probes (in microbar)',
+            37 : f'P_surface={P_surface * 10:.1e}				# The pressure level that the broad band optical transit radius probes (in microbar)',
             29 : f'surface_temp={T_surface:.0f}	# Kelvin, top of planet where enclosed mass equals total mass',
             13 : f'input_file="./input/MR.txt"		# Input file name & location'
         }
@@ -94,7 +92,7 @@ class planet:
             15: f'mass_of_atm=0		# Earth Masses in atmosphere',
             16: f'surface_temp={T_surface:.0f}	# Kelvin, top of planet where enclosed mass equals total mass',
             21: f'output_file="./result/pl2.txt"	# Output file name & location',
-            25: f'P_surface={self.P_surface * 10:.1e}			# The pressure level that the broad band optical transit radius probes (in microbar)'
+            25: f'P_surface={P_surface * 10:.1e}			# The pressure level that the broad band optical transit radius probes (in microbar)'
         }
 
         modify_file_by_lines(mode0_config_file_path, mode0_config_file_path, mode0_config_file_modifications)
@@ -128,10 +126,20 @@ class planet:
 if __name__ == '__main__':
 
     P = 1e5
-    vf_CO2 = 0.01
-    phreeqc_CO2_equilibrium_phase(P, 300, 8, 0, P*vf_CO2)
+    vf_CO2 = 0.04 * 0.01
+    vf_H2O = 1 * 0.01
 
-    # test_planet = planet(1 * M_EARTH, 1 * R_EARTH, 1, 1e5, 300, 'G2', '')
+    m_atm = 5
+    m_ocean = 1.4e3
+    mmw_atm = 0.028
+    mol_atm = m_atm / mmw_atm
+    mol_co2 = mol_atm*vf_CO2
+    mol_h2o = mol_atm*vf_H2O
+
+    # phreeqc_CO2_equilibrium_phase(P, 300, 7, 0, P*vf_CO2, P*vf_H2O, m_ocean, mol_co2, mol_h2o)
+
+    test_planet = planet(1 * M_EARTH, 1 * R_EARTH, 1, 1e5, 300, 'G2', {})
+    test_planet.surface.H2O_evaporation()
     # test_planet.plot_PT()
     # test_planet.hydrosphere.calculate_CO2()
 
