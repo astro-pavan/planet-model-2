@@ -54,6 +54,7 @@ class atmosphere(layer):
 
         super().__init__(m, r, P, T, rho)
         self.x_gas = x_gas
+        self.mmw = mmw
 
 
     def run_AGNI(self, PT_initial, high_spectral_res=False, return_tuple=False):
@@ -136,6 +137,10 @@ class atmosphere(layer):
     def change_gas_species(self, modified_species, x_new):
 
         x_old = self.x_gas[modified_species]
+
+        if type(x_new) is not np.ndarray:
+            x_new = np.full_like(x_old, x_new)
+
         self.x_gas[modified_species] = x_new
         
         for species in self.x_gas.keys():
