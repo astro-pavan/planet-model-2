@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import CubicSpline
 import os
+import subprocess
 
 AGNI_path = '/home/pt426/AGNI'
 
@@ -38,32 +39,24 @@ class atmosphere(layer):
         self.host_star_spectral_type = spec_type
         self.P_surface = P_surface
 
-        P, T, z, mmw, x_gas = self.run_AGNI(T_surface_initial)
+        self.run_AGNI(T_iso=T_surface_initial, x_gas=atm_vmrs, high_spectral_res=True)
 
-        # new_P = np.logspace(1, 5, num=60)
-        # new_T = CubicSpline(P, T)(new_P)
-        # P, T, z = self.run_AGNI((new_P, new_T), high_spectral_res=True)
-
-        r = z + self.r_bottom
-
-        rho = (P * mmw) / (IDEAL_GAS_CONSTANT * T)
-
-        dr = - np.diff(r, prepend=r[0])
-        dm = (4 * np.pi * (r ** 2) * rho) * dr
-        m = (np.sum(dm) - np.cumsum(dm)) + m_bottom
-
-        super().__init__(m, r, P, T, rho)
-        self.x_gas = x_gas
-        self.mmw = mmw
-
-
-    def run_AGNI(self, PT_initial, high_spectral_res=False, return_tuple=False):
+    def run_AGNI(self, T_iso=None, x_gas=None, high_spectral_res=False, resample_levels=None):
 
         wd = os.getcwd()
         config_file_path = f'{AGNI_path}/res/config/default.toml'
         config_file_path_new = f'{AGNI_path}/res/config/pl2.toml'
 
         n_spectral_bands = 256 if high_spectral_res else 48
+
+        if x_gas is None:
+            x_gas = self.x_gas
+
+        x_N2 = x_gas['N2'][0]
+        x_CO2 = x_gas['CO2'][0]
+        x_H2O = x_gas['H2O'][0]
+
+        vmr_dict = '{' + f'N2={x_N2:.6f}, CO2={x_CO2:.6f}, H2O={x_H2O:.6f}' + '}'
 
         config_file_modifications = {
             5 : 'title = "pl2"',
@@ -75,32 +68,33 @@ class atmosphere(layer):
             26 : f'    input_star      = "res/stellar_spectra/{spectral_types[self.host_star_spectral_type]}"              # Path to stellar spectrum.',
             56 : f'    solvers         = ["levenberg"]                        # Ordered list of solvers to apply (see wiki).',
             25 : f'    input_sf        = "res/spectral_files/Dayspring/{n_spectral_bands}/Dayspring.sf"   # Path to SOCRATES spectral file.',
-            32 : '    vmr_dict        = { N2=0.99, CO2 = 0.01, H2O = 0.00 }               # Volatile volume mixing ratios (=mole fractions).',
+            32 : f'    vmr_dict        = {vmr_dict}               # Volatile volume mixing ratios (=mole fractions).',
             60 : '    easy_start      = true                     # Initially down-scale convective/condensation fluxes, if initial guess is poor.',
             11 : '    s0_fact         = 1.0            # Stellar flux scale factor which accounts for planetary rotation (c.f. Cronin+13).',
-            14 : '    albedo_s        = 0.5               # Grey surface albedo when material=greybody.'
+            14 : '    albedo_s        = 0.3               # Grey surface albedo when material=greybody.'
         }
 
-        if type(PT_initial) is float or type(PT_initial) is int:
+        if T_iso is not None:
 
-            T_initial = PT_initial
-
-            config_file_modifications[58] = f'    initial_state   = ["iso", "{T_initial:.0f}"]     # Ordered list of requests describing the initial state of the atmosphere (see wiki).'
+            config_file_modifications[58] = f'    initial_state   = ["iso", "{T_iso:.0f}"]     # Ordered list of requests describing the initial state of the atmosphere (see wiki).'
             n_levels = 25
-            T_surface = T_initial
+            T_surface = T_iso
 
         else:
 
-            P_initial, T_initial = PT_initial
+            if resample_levels is not None:
+                P_interpolator = CubicSpline(self.P, self.T)
+                self.P = np.logspace(1, 5, num=resample_levels)
+                self.T = P_interpolator(self.P)
 
-            n_levels = len(P_initial)
-            PT = pd.DataFrame({'P' : P_initial, 'T' : T_initial})
+            n_levels = len(self.P)
+            PT = pd.DataFrame({'P' : self.P, 'T' : self.P})
             PT_profile_file_path = f'{AGNI_path}/res/config/PT_initial.csv'
 
             PT.to_csv(PT_profile_file_path, index=False, header=False)
 
             config_file_modifications[58] = f'    initial_state   = ["csv", "{PT_profile_file_path}"]     # Ordered list of requests describing the initial state of the atmosphere (see wiki).'
-            T_surface = T_initial[-1]
+            T_surface = self.T[-1]
 
 
         config_file_modifications[8] = f'    tmp_surf        = {T_surface:.1f}            # Surface temperature [kelvin].'
@@ -109,7 +103,8 @@ class atmosphere(layer):
         modify_file_by_lines(config_file_path, config_file_path_new, config_file_modifications)
 
         os.chdir(AGNI_path)
-        os.system('./agni.jl res/config/pl2.toml')
+        subprocess.run(['./agni.jl', 'res/config/pl2.toml'])
+
         os.chdir(wd)
 
         AGNI_output_file_path = f'{AGNI_path}/out/atm.nc'
@@ -131,8 +126,19 @@ class atmosphere(layer):
         mmw = np.array(atm_nc['mmw'])
 
         atm_nc.close()
-            
-        return P, T, z, mmw, x_gas
+
+        self.P = P
+        self.T = T
+        self.r = z + self.r_bottom
+
+        self.rho = (P * mmw) / (IDEAL_GAS_CONSTANT * T)
+
+        dr = - np.diff(self.r, prepend=self.r[0])
+        dm = (4 * np.pi * (self.r ** 2) * self.rho) * dr
+        self.m = (np.sum(dm) - np.cumsum(dm)) + self.m_bottom
+
+        self.x_gas = x_gas
+        self.mmw = mmw
     
     def change_gas_species(self, modified_species, x_new):
 
