@@ -1,7 +1,8 @@
 import numpy as np
-import os
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
+import subprocess
 
 from layers.core import core
 from layers.hydrosphere import hydrosphere
@@ -29,7 +30,7 @@ class planet:
 
         print('ATMOSPHERE GENERATED')
 
-        print('GENERATING PLANET...')
+        print('GENERATING INTERNAL STRUCTURE...')
 
         df_core, df_hydro = self.run_Magarathea(P_surface, self.atmosphere.T[-1])
 
@@ -47,9 +48,12 @@ class planet:
 
         self.hydrosphere = hydrosphere(m_hydro, r_hydro, P_hydro, T_hydro, rho_hydro)
         self.core = core(m_core, r_core, P_core, T_core, rho_core)
+
+        print('INTERNAL STRUCTURE GENERATED')
+
         self.surface = surface(self.hydrosphere, self.atmosphere)
         
-        print('PLANET GENERATED')
+        
 
 
     def run_Magarathea(self, P_surface, T_surface):
@@ -79,7 +83,7 @@ class planet:
         modify_file_by_lines(mode4_config_file_path, mode4_config_file_path, mode4_config_file_modifications)
 
         os.chdir(magrathea_path)
-        os.system('./planet run/mode4.cfg')
+        subprocess.run(['./planet', 'run/mode4.cfg'])
 
         mode4_results_table = pd.read_table(mode4_output_file_path, sep='\s+')
 
@@ -97,7 +101,7 @@ class planet:
 
         modify_file_by_lines(mode0_config_file_path, mode0_config_file_path, mode0_config_file_modifications)
 
-        os.system('./planet run/mode0.cfg')
+        subprocess.run(['./planet', 'run/mode0.cfg'])
         os.chdir(wd)
 
         df = pd.read_table(mode0_output_file_path, sep='	 ', engine='python')
@@ -133,20 +137,6 @@ class planet:
 
 if __name__ == '__main__':
 
-    P = 1e5
-    vf_CO2 = 0.04 * 0.01
-
-    m_atm = 5
-    m_ocean = 1.4e3
-    mmw_atm = 0.028
-    mol_atm = m_atm / mmw_atm
-    mol_co2 = mol_atm*vf_CO2
-
-    # phreeqc_CO2_equilibrium_phase(P, 300, 7, 0, P*vf_CO2, m_ocean, mol_co2)
-
-    test_planet = planet(1 * M_EARTH, 1 * R_EARTH, 1, 1e5, 300, 'G2', {})
-    # test_planet.surface.H2O_evaporation()
-    test_planet.surface.phreeqc_equilibrium_phase()
-    # test_planet.hydrosphere.calculate_CO2()
+    test_planet = planet(1 * M_EARTH, 1 * R_EARTH, 0.5, 1e5, 270, 'G2', {'N2' : [0.999], 'CO2' : [0.001], 'H2O' : [0.00]})
 
         
