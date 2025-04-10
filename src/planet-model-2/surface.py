@@ -26,13 +26,12 @@ class surface:
 
         print(P_H2O / 1e2)
         
-        vmr_H2O_new = P_H2O / self.P
-        vmr_H2O_old = self.atmosphere.vmrs['H2O']
+        x_H2O_old = self.atmosphere.x_gas['H2O']
+        x_H2O_new = np.full_like(x_H2O_old, P_H2O / self.P)
 
-        print(vmr_H2O_old)
-        print(vmr_H2O_new)
+        self.atmosphere.change_gas_species('H2O', x_H2O_new)
 
-        #self.atmosphere.vmrs['H2O'] = np.full_like()
+        print(self.atmosphere.x_gas)
 
     def gas_ocean_interaction(self):
 
@@ -51,7 +50,7 @@ def saturation_vapour_pressure(T):
 
 
 
-def phreeqc_CO2_equilibrium_phase(P, T, pH, C_dissolved, P_CO2, P_H2O, m_water=1, mol_CO2=10, mol_H2O=10):
+def phreeqc_CO2_equilibrium_phase(P, T, pH, C_dissolved, P_CO2, m_water=1, mol_CO2=10):
     
     input_template_file_path = 'templates/phreeqc_co2_equilibrium_input_template.txt'
     input_file_path_new = f'{PHREEQC_path}/input'
@@ -61,9 +60,9 @@ def phreeqc_CO2_equilibrium_phase(P, T, pH, C_dissolved, P_CO2, P_H2O, m_water=1
             4 : f'    temp        {T + ABSOLUTE_ZERO:.1f}        # Temperature in degrees Celsius',
             5 : f'    pressure    {P / EARTH_ATM:.2f}         # Pressure in atmospheres',
             6 : f'    pH          {pH:.1f}         # Initial pH',
-            8 : f'    C           {C_dissolved:.2f}         # Total dissolved carbon',
-            9 : f'    water       {m_water:.2f}         # mass of water in kg',
-            12 : f'    CO2(g)      {np.log10(P_CO2 / EARTH_ATM)}        {mol_CO2:.2f}    # partial pressure in log(atm) and number of moles of CO2',
+            11 : f'    C           {C_dissolved:.2f}         # Total dissolved carbon',
+            12 : f'    water       {m_water:.2f}         # mass of water in kg',
+            15 : f'    CO2(g)      {np.log10(P_CO2 / EARTH_ATM)}        {mol_CO2:.2f}    # partial pressure in log(atm) and number of moles of CO2',
         }
 
     modify_file_by_lines(input_template_file_path, input_file_path_new, input_file_modifications)
