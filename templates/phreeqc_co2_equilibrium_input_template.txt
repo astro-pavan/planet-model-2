@@ -20,8 +20,11 @@ SELECTED_OUTPUT
     -simulation false
     -solution false
     -distance false
+    -step false
+    -time false
     -pH true
+    -pe false
     -percent_error true
-    -totals H C O
+    -totals C Ca Na Cl
 
 END
