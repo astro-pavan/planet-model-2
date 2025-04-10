@@ -18,8 +18,6 @@ def modify_file_by_lines(filename, new_filename, modification_dict):
             # Write the modified lines back to the file
             with open(new_filename, 'w') as file:
                 file.writelines(lines)
-
-            print("File modified successfully.")
         
     except FileNotFoundError:
         print(f"Error: The file at '{filename}' was not found.")
