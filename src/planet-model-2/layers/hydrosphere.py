@@ -9,33 +9,15 @@ import os
 PHREEQC_path = '/data/pt426/phreeqc/bin'
 
 class hydrosphere(layer):
-    
-    def column_density(self):
-        pass
 
+    def __init__(self, m, r, P, T, rho, eos=None, T_profile=None):
+        
+        super().__init__(m, r, P, T, rho, eos, T_profile)
 
-def equilbriate_CO2(P, T, pH_initial, C_dissolved_initial, P_CO2_initial):
-    pass
-
-
-def phreeqc_CO2_equilibrium_phase(P, T, pH, C_dissolved, P_CO2, P_H2O, m_water=1, mol_CO2=10, mol_H2O=10):
-    
-    input_template_file_path = 'templates/phreeqc_co2_equilibrium_input_template.txt'
-    input_file_path_new = f'{PHREEQC_path}/input'
-    output_file_path = f'{PHREEQC_path}/input.out'
-    
-    input_file_modifications = {
-            4 : f'    temp        {T + ABSOLUTE_ZERO:.1f}        # Temperature in degrees Celsius [1, 2]',
-            5 : f'    pressure    {P / EARTH_ATM:.2f}         # Pressure in atmospheres [2]',
-            6 : f'    pH          {pH:.1f}         # Initial pH',
-            8 : f'    C           {C_dissolved:.2f}         # Total dissolved carbon [4]',
-            9 : f'    water       {m_water:.2f}         # mass of water in kg',
-            12 : f'    CO2(g)      {np.log10(P_CO2 / EARTH_ATM)}        {mol_CO2:.2f}    # partial pressure in log(atm) and number of moles of CO2',
+        self.pH = 7
+        self.molarity = {
+            'C' : 0,
+            'Ca' : 0,
+            'Na' : 0,
+            'Cl' : 0
         }
-
-    modify_file_by_lines(input_template_file_path, input_file_path_new, input_file_modifications)
-
-    wd = os.getcwd()
-    os.chdir(PHREEQC_path)
-    os.system('./phreeqc input')
-    os.chdir(wd)
