@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from layers.core import core
-from layers.hydrosphere import hydrosphere, phreeqc_CO2_equilibrium_phase
+from layers.hydrosphere import hydrosphere
 from layers.atmosphere import atmosphere
 from surface import surface
 
@@ -120,6 +120,14 @@ class planet:
 
         plt.yscale('log')
         plt.savefig('PT.png')
+        plt.close()
+
+    def plot_PT_ocean(self):
+        plt.plot(self.hydrosphere.T, self.hydrosphere.r - np.max(self.hydrosphere.r))
+
+        # plt.yscale('log')
+        plt.savefig('PT_ocean.png')
+        plt.close()
 
 
 
@@ -127,20 +135,18 @@ if __name__ == '__main__':
 
     P = 1e5
     vf_CO2 = 0.04 * 0.01
-    vf_H2O = 1 * 0.01
 
     m_atm = 5
     m_ocean = 1.4e3
     mmw_atm = 0.028
     mol_atm = m_atm / mmw_atm
     mol_co2 = mol_atm*vf_CO2
-    mol_h2o = mol_atm*vf_H2O
 
-    # phreeqc_CO2_equilibrium_phase(P, 300, 7, 0, P*vf_CO2, P*vf_H2O, m_ocean, mol_co2, mol_h2o)
+    # phreeqc_CO2_equilibrium_phase(P, 300, 7, 0, P*vf_CO2, m_ocean, mol_co2)
 
     test_planet = planet(1 * M_EARTH, 1 * R_EARTH, 1, 1e5, 300, 'G2', {})
-    test_planet.surface.H2O_evaporation()
-    # test_planet.plot_PT()
+    # test_planet.surface.H2O_evaporation()
+    test_planet.surface.phreeqc_equilibrium_phase()
     # test_planet.hydrosphere.calculate_CO2()
 
         
