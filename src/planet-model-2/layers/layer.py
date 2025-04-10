@@ -2,7 +2,7 @@ from scipy.integrate import solve_ivp
 from scipy.interpolate import CubicSpline
 import numpy as np
 
-from constants import G, M_EARTH, R_EARTH, IDEAL_GAS_CONSTANT
+from constants import G, M_EARTH, R_EARTH
 
 class layer:
 
@@ -85,6 +85,10 @@ class layer:
 
         return cls(m, r, P, T, rho, eos, T_profile)
 
+    def column_density(self):
+
+        dr = np.abs(np.diff(self.r, prepend=self.r[0]))
+        return np.sum(self.rho * dr)
 
 if __name__ == '__main__':
 
