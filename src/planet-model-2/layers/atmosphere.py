@@ -1,6 +1,6 @@
 from layers.layer import layer
 from utils import modify_file_by_lines
-from constants import M_EARTH, R_EARTH, G, IDEAL_GAS_CONSTANT
+from constants import G, IDEAL_GAS_CONSTANT
 
 import netCDF4
 import numpy as np
@@ -38,7 +38,7 @@ class atmosphere(layer):
         self.host_star_spectral_type = spec_type
         self.P_surface = P_surface
 
-        P, T, z, mmw, vmrs = self.run_AGNI(T_surface_initial)
+        P, T, z, mmw, x_gas = self.run_AGNI(T_surface_initial)
 
         # new_P = np.logspace(1, 5, num=60)
         # new_T = CubicSpline(P, T)(new_P)
@@ -53,8 +53,7 @@ class atmosphere(layer):
         m = (np.sum(dm) - np.cumsum(dm)) + m_bottom
 
         super().__init__(m, r, P, T, rho)
-        self.vmrs = vmrs
-
+        self.x_gas = x_gas
 
 
     def run_AGNI(self, PT_initial, high_spectral_res=False, return_tuple=False):
@@ -118,12 +117,12 @@ class atmosphere(layer):
 
         # print(atm_nc.variables.keys())
 
-        x_gas = np.array(atm_nc['x_gas'])
-        vmrs = {}
+        x_gas_nc = np.array(atm_nc['x_gas'])
+        x_gas = {}
 
         for i, l in enumerate(atm_nc['gases']):
             species = b''.join(l).decode('utf-8').rstrip()
-            vmrs[species] = x_gas[:, i]
+            x_gas[species] = x_gas_nc[:, i]
 
         P = np.array(atm_nc['p'])
         T = np.array(atm_nc['tmp'])
@@ -132,5 +131,16 @@ class atmosphere(layer):
 
         atm_nc.close()
             
-        return P, T, z, mmw, vmrs
+        return P, T, z, mmw, x_gas
+    
+    def change_gas_species(self, modified_species, x_new):
+
+        x_old = self.x_gas[modified_species]
+        self.x_gas[modified_species] = x_new
+        
+        for species in self.x_gas.keys():
+            if species != modified_species:
+                self.x_gas[species] = self.x_gas[species] / (1 + (x_new - x_old))
+    
+
 
