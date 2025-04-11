@@ -170,7 +170,62 @@ class planet:
             for gas in self.atmosphere.x_gas.keys():
                 x_gas_grp.create_dataset(gas, self.atmosphere.x_gas[gas])
 
+    @classmethod
+    def load_from_hdf5(cls, filename):
+        # Create an uninitialized Planet instance
+        obj = cls.__new__(cls)
+        
+        # Create uninitialized subcomponents without calling their constructors
+        obj.core = type('core', (), {})()
+        obj.hydrosphere = type('hydrosphere', (), {})()
+        obj.atmosphere = type('atmosphere', (), {})()
 
+        with h5py.File(filename, 'r') as f:
+            # Top-level attributes
+            obj.mass = f.attrs['Mass']
+            obj.radius = f.attrs['Radius']
+            obj.atmosphere.instellation = f.attrs['Instellation']
+            obj.atmosphere.host_star_spectral_type = f.attrs['Host Star Spectral Type']
+
+            # Core
+            core_grp = f['Core']
+            obj.core.m = core_grp['m'][()]
+            obj.core.r = core_grp['r'][()]
+            obj.core.P = core_grp['P'][()]
+            obj.core.T = core_grp['T'][()]
+            obj.core.rho = core_grp['rho'][()]
+
+            # Hydrosphere
+            hydro_grp = f['Hydrosphere']
+            obj.hydrosphere.m = hydro_grp['m'][()]
+            obj.hydrosphere.r = hydro_grp['r'][()]
+            obj.hydrosphere.P = hydro_grp['P'][()]
+            obj.hydrosphere.T = hydro_grp['T'][()]
+            obj.hydrosphere.rho = hydro_grp['rho'][()]
+
+            molarity_grp = hydro_grp['Molarity']
+            obj.hydrosphere.molarity = {
+                species: molarity_grp.attrs[species]
+                for species in molarity_grp.attrs
+            }
+
+            # Atmosphere
+            atm_grp = f['Atmosphere']
+            obj.atmosphere.m = atm_grp['m'][()]
+            obj.atmosphere.r = atm_grp['r'][()]
+            obj.atmosphere.P = atm_grp['P'][()]
+            obj.atmosphere.T = atm_grp['T'][()]
+            obj.atmosphere.rho = atm_grp['rho'][()]
+            obj.atmosphere.mmw = atm_grp['mmw'][()]
+
+            x_gas_grp = atm_grp['x_gas']
+            obj.atmosphere.x_gas = {
+                gas: x_gas_grp[gas][()]
+                for gas in x_gas_grp.keys()
+            }
+
+        return obj
+    
 
 
 if __name__ == '__main__':
@@ -178,5 +233,11 @@ if __name__ == '__main__':
     test_planet = planet(1 * M_EARTH, 1 * R_EARTH, 1, 1e5, 270, 'G2', 
                          {'N2' : [0.78], 'O2' : [0.21], 'Ar' : [0.009], 'CO2' : [0.0004], 'H2O' : [0.00]},
                            tidally_locked=False)
+
+    test_planet.save_to_hdf5('planet.hdf5')
+    test2 = planet.load_from_hdf5('planet.hdf5')
+    test2.plot_PT()
+
+
 
         
