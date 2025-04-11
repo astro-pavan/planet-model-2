@@ -29,7 +29,7 @@ solar_constant = 1360 # W / m^2
 
 class atmosphere(layer):
 
-    def __init__(self, r_bottom, m_bottom, atm_vmrs, F_star, spec_type, P_surface, T_surface_initial):
+    def __init__(self, r_bottom, m_bottom, atm_vmrs, F_star, spec_type, P_surface, T_surface_initial, tidally_locked):
 
         self.m_bottom, self.r_bottom = m_bottom, r_bottom
 
@@ -38,13 +38,14 @@ class atmosphere(layer):
         self.instellation = F_star
         self.host_star_spectral_type = spec_type
         self.P_surface = P_surface
+        self.tidally_locked = tidally_locked
 
         self.run_AGNI(T_iso=T_surface_initial, x_gas=atm_vmrs, high_spectral_res=True)
 
-    def run_AGNI(self, T_iso=None, x_gas=None, high_spectral_res=False, resample_levels=None):
+    def run_AGNI(self, T_iso=None, x_gas=None, high_spectral_res=False, n_levels=25):
 
         wd = os.getcwd()
-        config_file_path = f'{AGNI_path}/res/config/default.toml'
+        config_file_path = 'templates/default.toml'
         config_file_path_new = f'{AGNI_path}/res/config/pl2.toml'
 
         n_spectral_bands = 256 if high_spectral_res else 48
@@ -59,32 +60,28 @@ class atmosphere(layer):
         vmr_dict = '{' + f'N2={x_N2:.6f}, CO2={x_CO2:.6f}, H2O={x_H2O:.6f}' + '}'
 
         config_file_modifications = {
-            5 : 'title = "pl2"',
-            55 : '    solution_type   = 3                         # Solution type (see wiki).',
             30 : f'    p_surf          = {self.P_surface / 1e5:.2f}                     # Total surface pressure [bar].',
             15 : f'    radius          = {self.r_bottom:.3e}            # Planet radius at the surface [m].',
             16 : f'    gravity         = {self.g_surface:.2e}              # Gravitational acceleration at the surface [m s-2]',
             9 : f'    instellation    = {self.instellation * solar_constant:.1f}           # Stellar flux at planet\'s orbital distance [W m-2].',
             26 : f'    input_star      = "res/stellar_spectra/{spectral_types[self.host_star_spectral_type]}"              # Path to stellar spectrum.',
-            56 : f'    solvers         = ["levenberg"]                        # Ordered list of solvers to apply (see wiki).',
             25 : f'    input_sf        = "res/spectral_files/Dayspring/{n_spectral_bands}/Dayspring.sf"   # Path to SOCRATES spectral file.',
             32 : f'    vmr_dict        = {vmr_dict}               # Volatile volume mixing ratios (=mole fractions).',
-            60 : '    easy_start      = true                     # Initially down-scale convective/condensation fluxes, if initial guess is poor.',
-            11 : '    s0_fact         = 1.0            # Stellar flux scale factor which accounts for planetary rotation (c.f. Cronin+13).',
-            14 : '    albedo_s        = 0.3               # Grey surface albedo when material=greybody.'
         }
+
+        if self.tidally_locked:
+            config_file_modifications[11] = '    s0_fact         = 1.0               # Stellar flux scale factor which accounts for planetary rotation (c.f. Cronin+13).'
 
         if T_iso is not None:
 
             config_file_modifications[58] = f'    initial_state   = ["iso", "{T_iso:.0f}"]     # Ordered list of requests describing the initial state of the atmosphere (see wiki).'
-            n_levels = 25
             T_surface = T_iso
 
         else:
 
-            if resample_levels is not None:
+            if n_levels != len(self.P):
                 P_interpolator = CubicSpline(self.P, self.T)
-                self.P = np.logspace(1, 5, num=resample_levels)
+                self.P = np.logspace(1, 5, num=n_levels)
                 self.T = P_interpolator(self.P)
 
             n_levels = len(self.P)
