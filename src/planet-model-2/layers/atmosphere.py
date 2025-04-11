@@ -44,6 +44,8 @@ class atmosphere(layer):
 
     def run_AGNI(self, T_iso=None, x_gas=None, high_spectral_res=False, n_levels=25):
 
+        print('FINDING RADIATIVE CONVECTIVE EQULIBRIUM...')
+
         wd = os.getcwd()
         config_file_path = 'templates/default.toml'
         config_file_path_new = f'{AGNI_path}/res/config/pl2.toml'
@@ -100,7 +102,7 @@ class atmosphere(layer):
         modify_file_by_lines(config_file_path, config_file_path_new, config_file_modifications)
 
         os.chdir(AGNI_path)
-        subprocess.run(['./agni.jl', 'res/config/pl2.toml'])
+        subprocess.run(['./agni.jl', 'res/config/pl2.toml'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         os.chdir(wd)
 
@@ -136,6 +138,8 @@ class atmosphere(layer):
 
         self.x_gas = x_gas
         self.mmw = mmw
+
+        print('RADIATIVE CONVECTIVE EQULIBRIUM FOUND')
     
     def change_gas_species(self, modified_species, x_new):
 
