@@ -23,6 +23,7 @@ SELECTED_OUTPUT
     -time false
     -pH true
     -pe false
+    -temperature
     -totals C Ca Na Cl
     -saturation_indices CO2(g) H2O(g)
     -equilibrium_phases CO2(g)

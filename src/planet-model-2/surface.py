@@ -171,33 +171,52 @@ def phreeqc_calculation(P, T, m_water, mol_CO2, x_CO2, molality_CO2):
     solution_df = pd.read_table(output_file_path, sep='\s+')
 
     final_molality_CO2 = solution_df.at[1, 'C']
-    final_P_CO2 = 10 ** solution_df.at[1, 'si_CO2(g)']
+    final_x_CO2 = (EARTH_ATM * 10 ** solution_df.at[1, 'si_CO2(g)']) / P
+    final_x_H2O = (EARTH_ATM * 10 ** solution_df.at[1, 'si_H2O(g)']) / P
 
-    return final_molality_CO2, final_P_CO2
+    return final_molality_CO2, final_x_CO2, final_x_H2O
 
 
-def CO2_equilibrium_constant_atm(P, T, x_CO2):
+def CO2_equilibrium(P, T, x_CO2, molality_CO2, constant_atmosphere=False):
 
-    molality_old = 1
-    molality_new = 0
+    molality_old, x_CO2_old = 0, x_CO2
+    molality_new, x_CO2_new = molality_CO2, x_CO2
+    start = True
     n = 0
 
-    while np.abs(molality_old - molality_new) > 1e-9:
+    while np.abs(molality_old - molality_new) > 1e-9 or start:
+
+        start = False
         
         molality_old = molality_new
 
-        molality_new, _ = phreeqc_calculation(P, T, 1, 10, x_CO2, molality_old)
+        if not constant_atmosphere:
+            x_CO2_old = x_CO2_new
+            
+        print(f'x_CO2 : {x_CO2_old:.6f}, molality_CO2 : {molality_old:.6f}')
 
-        print(f"\rCALCULATING HYDROSPHERE CO2 CONTENT (STEPS: {n})", end='', flush=True)
+        molality_new, x_CO2_new, _ = phreeqc_calculation(P, T, 1000000, 1, x_CO2_old, molality_old)
+
+        # print(f"\rCALCULATING HYDROSPHERE CO2 CONTENT (STEPS: {n})", end='', flush=True)
         n += 1
 
     print('')
 
-    return molality_new
+    return molality_new, x_CO2_new
 
 
 if __name__ == '__main__':
 
-    print(CO2_equilibrium_constant_atm(1e5, 300, 0.004))
+    molality, x_CO2 = CO2_equilibrium(1e5, 300, 0.004, 0, constant_atmosphere=True)
+
+    print(molality)
+    print(x_CO2)
+
+    # print(phreeqc_calculation(1e5, 280, 1, 100, 0.004, molality)[1])
+
+    molality, x_CO2 = CO2_equilibrium(1e5, 295, 0.004, molality, constant_atmosphere=False)
+
+    print(molality)
+    print(x_CO2)
 
 
