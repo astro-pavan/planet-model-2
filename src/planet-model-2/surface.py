@@ -20,24 +20,45 @@ class surface:
         self.P = self.atmosphere.P[-1]
         self.T = self.atmosphere.T[-1]
 
-        self.gas_ocean_interactions()
+        self.gas_ocean_equilbrium(keep_atmosphere_constant=False)
+        self.gas_ocean_equilbrium(keep_atmosphere_constant=False)
         self.atmosphere.run_AGNI(T_iso=self.T, high_spectral_res=True)
 
-        self.gas_ocean_interactions()
+        return
+
+        self.T = self.atmosphere.T[-1]
+
+        print(self.T)
+
+        # self.hydrosphere.molarity['Ca'] = 1
+        # self.hydrosphere.molarity['Cl'] = 1
+        # self.hydrosphere.molarity['Na'] = 1
+
+        self.gas_ocean_equilbrium(keep_atmosphere_constant=False)
         self.atmosphere.run_AGNI(T_iso=self.T, high_spectral_res=True)
 
-    def gas_ocean_interactions(self):
+        print(self.T)
+
+        self.T = self.atmosphere.T[-1]
+
+    def gas_ocean_equilbrium(self, keep_atmosphere_constant=True):
 
         self.H2O_evaporation()
 
         n, d_CO2 = 0, 1
 
-        while np.abs(d_CO2) > 0.01:
-            d_CO2 = self.phreeqc_equilibrium_phase(keep_atmosphere_constant=True)
-            n += 1
-            print(f"\rCALCULATING HYDROSPHERE CO2 CONTENT (STEPS: {n})", end='', flush=True)
-        
-        print('')
+        if keep_atmosphere_constant:
+
+            while np.abs(d_CO2) > 0.01:
+                d_CO2 = self.phreeqc_equilibrium_phase(keep_atmosphere_constant)
+                n += 1
+                print(f"\rCALCULATING HYDROSPHERE CO2 CONTENT (STEPS: {n})", end='', flush=True)
+            
+            print('')
+
+        else:
+
+            self.phreeqc_equilibrium_phase(keep_atmosphere_constant)
 
     def H2O_evaporation(self):
 
@@ -117,4 +138,66 @@ class surface:
             self.atmosphere.change_gas_species('CO2', x_CO2_new)
 
         return d_CO2
+    
+
+
+def phreeqc_calculation(P, T, m_water, mol_CO2, x_CO2, molality_CO2):
+    
+    input_template_file_path = 'templates/phreeqc_co2_equilibrium_input_template.txt'
+    input_file_path_new = f'{PHREEQC_path}/input'
+    output_file_path = f'{PHREEQC_path}/output.txt'
+
+    P_CO2 = x_CO2 * P
+
+    input_file_modifications = {
+                4 : f'    temp        {T + ABSOLUTE_ZERO:.1f}        # Temperature in degrees Celsius',
+                5 : f'    pressure    {P / EARTH_ATM:.2f}         # Pressure in atmospheres',
+                6 : f'    pH          {7:.1f}         # Initial pH',
+                8 : f'    Ca          {0:.8f}         # Calcium concentration',
+                9 : f'    Na          {0:.8f}         # Sodium concentration',
+                10 : f'    Cl          {0:.8f}         # Chloride concentration',
+                11 : f'    C           {molality_CO2:.8f}         # Total dissolved carbon',
+                12 : f'    water       {m_water:.2f}         # mass of water in kg',
+                15 : f'    CO2(g)      {np.max([np.log10(P_CO2 / EARTH_ATM), -10])}        {mol_CO2:.2f}    # partial pressure in log(atm) and number of moles of CO2',
+            }
+
+    modify_file_by_lines(input_template_file_path, input_file_path_new, input_file_modifications)
+
+    wd = os.getcwd()
+    os.chdir(PHREEQC_path)
+    subprocess.run(['./phreeqc', 'input'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    os.chdir(wd)
+
+    solution_df = pd.read_table(output_file_path, sep='\s+')
+
+    final_molality_CO2 = solution_df.at[1, 'C']
+    final_P_CO2 = 10 ** solution_df.at[1, 'si_CO2(g)']
+
+    return final_molality_CO2, final_P_CO2
+
+
+def CO2_equilibrium_constant_atm(P, T, x_CO2):
+
+    molality_old = 1
+    molality_new = 0
+    n = 0
+
+    while np.abs(molality_old - molality_new) > 1e-9:
+        
+        molality_old = molality_new
+
+        molality_new, _ = phreeqc_calculation(P, T, 1, 10, x_CO2, molality_old)
+
+        print(f"\rCALCULATING HYDROSPHERE CO2 CONTENT (STEPS: {n})", end='', flush=True)
+        n += 1
+
+    print('')
+
+    return molality_new
+
+
+if __name__ == '__main__':
+
+    print(CO2_equilibrium_constant_atm(1e5, 300, 0.004))
+
 
