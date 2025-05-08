@@ -15,7 +15,7 @@ class hydrosphere(layer):
         super().__init__(m, r, P, T, rho, eos, T_profile)
 
         self.pH = 7
-        self.molarity = {
+        self.molality = {
             'C' : 0,
             'Ca' : 0,
             'Na' : 0,
