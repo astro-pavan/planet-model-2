@@ -155,9 +155,9 @@ class planet:
             hydro_grp.create_dataset('T', data=self.hydrosphere.T)
             hydro_grp.create_dataset('rho', data=self.hydrosphere.rho)
 
-            molarity_grp = hydro_grp.create_group('Molarity')
-            for species in self.hydrosphere.molarity.keys():
-                molarity_grp.attrs[species] = self.hydrosphere.molarity[species]
+            molality_grp = hydro_grp.create_group('Molarity')
+            for species in self.hydrosphere.molality.keys():
+                molality_grp.attrs[species] = self.hydrosphere.molality[species]
 
             atm_grp.create_dataset('m', data=self.atmosphere.m)
             atm_grp.create_dataset('r', data=self.atmosphere.r)
@@ -237,6 +237,7 @@ if __name__ == '__main__':
     test_planet.save_to_hdf5('planet.hdf5')
     test2 = planet.load_from_hdf5('planet.hdf5')
     test2.plot_PT()
+    print(f'Surface temperature: {test_planet.surface.T:.0f}')
 
 
 
