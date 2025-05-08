@@ -8,6 +8,7 @@ import pandas as pd
 from scipy.interpolate import CubicSpline
 import os
 import subprocess
+import matplotlib.pyplot as plt
 
 AGNI_path = '/home/pt426/AGNI'
 
@@ -138,6 +139,26 @@ class atmosphere(layer):
 
         self.x_gas = x_gas
         self.mmw = mmw
+
+        plt.plot(z, self.rho)
+        plt.savefig('rhoz.png')
+        plt.close()
+
+        plt.plot(z, T)
+        plt.savefig('Tz.png')
+        plt.close()
+
+        plt.plot(np.log10(z), T)
+        plt.savefig('Tlogz.png')
+        plt.close()
+
+        plt.plot(z, np.log10(T))
+        plt.savefig('logTz.png')
+        plt.close()
+
+        plt.plot(np.log10(z), np.log10(T))
+        plt.savefig('logTlogz.png')
+        plt.close()
 
         print('RADIATIVE CONVECTIVE EQULIBRIUM FOUND')
     
