@@ -85,7 +85,7 @@ class layer:
 
         return cls(m, r, P, T, rho, eos, T_profile)
 
-    def column_density(self):
+    def column_surface_density(self):
 
         dr = np.abs(np.diff(self.r, prepend=self.r[0]))
         return np.sum(self.rho * dr)
