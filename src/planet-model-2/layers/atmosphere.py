@@ -11,7 +11,11 @@ import subprocess
 import matplotlib.pyplot as plt
 
 AGNI_path = '/home/pt426/AGNI'
-HELIOS_path = 'home/pt426/HELIOS'
+HELIOS_path = '/data/pt426/HELIOS'
+CUDA_path = '/data/pt426/cuda/cuda12/bin'
+CUDA_LD_path = '/data/pt426/cuda/cuda12/lib64'
+CUDA_DYLD_path = '/data/pt426/cuda/cuda12/lib'
+
 
 spectral_types = {
     'M8' : 'trappist-1.txt',
@@ -40,7 +44,10 @@ class atmosphere(layer):
         self.P_surface = P_surface
         self.tidally_locked = tidally_locked
 
-        self.run_AGNI(T_iso=T_surface_initial, x_gas=atm_vmrs, high_spectral_res=True)
+        # self.run_AGNI(T_iso=T_surface_initial, x_gas=atm_vmrs, high_spectral_res=True)
+        
+        self.x_gas = atm_vmrs
+        self.run_HELIOS()
 
     def run_AGNI(self, T_iso=None, x_gas=None, high_spectral_res=False, n_levels=25, diagnostic_plots=True):
 
@@ -171,15 +178,22 @@ class atmosphere(layer):
         x_CO2 = self.x_gas['CO2'][-1]
         x_H2O = self.x_gas['H2O'][-1]
 
+        # species_data = {
+        #     'species' : ['H2O', 'CO2', 'H2', 'N2'],
+        #     'absorbing' : ['yes', 'yes', 'yes', 'yes'],
+        #     'scattering' : ['yes', 'yes', 'yes', 'yes'],
+        #     'mixing_ratio' : [x_H2O, x_CO2, 0, x_N2]
+        # }
+
         species_data = {
-            'species' : ['H2O', 'CO2', 'H2', 'N2'],
-            'absorbing' : ['yes', 'yes', 'yes', 'yes'],
-            'scattering' : ['yes', 'yes', 'yes', 'yes'],
-            'mixing_ratio' : [x_H2O, x_CO2, 0, x_N2]
+            'species' : ['H2O', 'CO2'],
+            'absorbing' : ['yes', 'yes'],
+            'scattering' : ['yes', 'yes'],
+            'mixing_ratio' : [x_H2O, x_CO2]
         }
         
         species_df = pd.DataFrame(species_data)
-        species_df.to_csv(f'{HELIOS_path}/input/species2.dat', sep='    ')
+        species_df.to_csv(f'{HELIOS_path}/input/species2.dat', sep='\t', index=False)
 
         recirculation = 0.25
 
@@ -194,8 +208,8 @@ class atmosphere(layer):
             39 : f'surface albedo =                                      0.0                             [file, number: 0 - 1]                        (CL: Y)',
             67 : f'  manual --> surface gravity [cm s^-2] =              {self.g_surface * 100:.0f}                             [number > 0]                                 (CL: Y)',
             68 : f'  manual --> orbital distance [AU] =                  {orbital_distance:.1f}                             [number > 0]                                 (CL: Y)',
-            69 : f'  manual --> radius planet [R_Jup] =                  {self.r_bottom / R_JUPITER}                           [number > 0]                                 (CL: Y)',
-            70 : f'  manual --> radius star [R_Sun] =                    {R_star:.1f}                               [number > 0]                                 (CL: Y)',
+            69 : f'  manual --> radius planet [R_Jup] =                  {self.r_bottom / R_JUPITER:4f}                           [number > 0]                                 (CL: Y)',
+            70 : f'  manual --> radius star [R_Sun] =                    {R_star / R_SUN:.1f}                               [number > 0]                                 (CL: Y)',
             71 : f'  manual --> temperature star [K] =                   {T_star:.0f}                            [number >= 0]                                (CL: Y)',
             99 : f'number of layers =                               {n_levels}                         [automatic, number > 0]                                        (CL: Y)'
         }
@@ -205,12 +219,14 @@ class atmosphere(layer):
 
         modify_file_by_lines(param_file_path, param_file_path_new, param_file_modifications)
 
-        wd = os.getcwd()
-        os.chdir(AGNI_path)
-        subprocess.run(['python3', 'helios.py'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        os.chdir(wd)
+        env = os.environ.copy()
+        env["PATH"] = CUDA_path + ":" + env["PATH"]
+        env["LD_LIBRARY_PATH"] = CUDA_LD_path + ":" + env.get("LD_LIBRARY_PATH", "")
+        env["DYLD_LIBRARY_PATH"] = CUDA_DYLD_path + ":" + env.get("LD_LIBRARY_PATH", "")
 
-        atm_df = pd.read_table(f'{HELIOS_path}/output/pl2/pl2_tp.dat', sep='\s+')
+        subprocess.run([f'.venv/bin/python', 'helios.py'], cwd=HELIOS_path, env=env)
+
+        atm_df = pd.read_table(f'{HELIOS_path}/output/pl2/pl2_tp.dat', sep='\s+', skiprows=1)
 
         print(atm_df)
 
