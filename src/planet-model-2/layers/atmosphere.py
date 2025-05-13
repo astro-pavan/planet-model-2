@@ -1,6 +1,6 @@
 from layers.layer import layer
 from utils import modify_file_by_lines
-from constants import G, IDEAL_GAS_CONSTANT
+from constants import G, IDEAL_GAS_CONSTANT, R_JUPITER, SPECTRAL_TYPE_DATA, STEFAN_BOLTZMANN, R_SUN, SOLAR_CONSTANT, AU
 
 import netCDF4
 import numpy as np
@@ -11,6 +11,7 @@ import subprocess
 import matplotlib.pyplot as plt
 
 AGNI_path = '/home/pt426/AGNI'
+HELIOS_path = 'home/pt426/HELIOS'
 
 spectral_types = {
     'M8' : 'trappist-1.txt',
@@ -25,8 +26,6 @@ spectral_types = {
     'G2' : 'sun.txt',
     'G0' : 'HIP67522.txt'
 }
-
-solar_constant = 1360 # W / m^2
 
 class atmosphere(layer):
 
@@ -43,9 +42,9 @@ class atmosphere(layer):
 
         self.run_AGNI(T_iso=T_surface_initial, x_gas=atm_vmrs, high_spectral_res=True)
 
-    def run_AGNI(self, T_iso=None, x_gas=None, high_spectral_res=False, n_levels=25):
+    def run_AGNI(self, T_iso=None, x_gas=None, high_spectral_res=False, n_levels=25, diagnostic_plots=True):
 
-        print('FINDING RADIATIVE CONVECTIVE EQULIBRIUM...')
+        print('Finding RCE...')
 
         wd = os.getcwd()
         config_file_path = 'templates/default.toml'
@@ -66,7 +65,7 @@ class atmosphere(layer):
             30 : f'    p_surf          = {self.P_surface / 1e5:.2f}                     # Total surface pressure [bar].',
             15 : f'    radius          = {self.r_bottom:.3e}            # Planet radius at the surface [m].',
             16 : f'    gravity         = {self.g_surface:.2e}              # Gravitational acceleration at the surface [m s-2]',
-            9 : f'    instellation    = {self.instellation * solar_constant:.1f}           # Stellar flux at planet\'s orbital distance [W m-2].',
+            9 : f'    instellation    = {self.instellation * SOLAR_CONSTANT:.1f}           # Stellar flux at planet\'s orbital distance [W m-2].',
             26 : f'    input_star      = "res/stellar_spectra/{spectral_types[self.host_star_spectral_type]}"              # Path to stellar spectrum.',
             25 : f'    input_sf        = "res/spectral_files/Dayspring/{n_spectral_bands}/Dayspring.sf"   # Path to SOCRATES spectral file.',
             32 : f'    vmr_dict        = {vmr_dict}               # Volatile volume mixing ratios (=mole fractions).',
@@ -140,28 +139,83 @@ class atmosphere(layer):
         self.x_gas = x_gas
         self.mmw = mmw
 
-        plt.plot(z, self.rho)
-        plt.savefig('rhoz.png')
-        plt.close()
+        if diagnostic_plots:
 
-        plt.plot(z, T)
-        plt.savefig('Tz.png')
-        plt.close()
+            plt.plot(z, self.rho)
+            plt.savefig('rhoz.png')
+            plt.close()
 
-        plt.plot(np.log10(z), T)
-        plt.savefig('Tlogz.png')
-        plt.close()
+            plt.plot(z, T)
+            plt.savefig('Tz.png')
+            plt.close()
 
-        plt.plot(z, np.log10(T))
-        plt.savefig('logTz.png')
-        plt.close()
+            plt.plot(np.log10(z), T)
+            plt.savefig('Tlogz.png')
+            plt.close()
 
-        plt.plot(np.log10(z), np.log10(T))
-        plt.savefig('logTlogz.png')
-        plt.close()
+            plt.plot(z, np.log10(T))
+            plt.savefig('logTz.png')
+            plt.close()
 
-        print('RADIATIVE CONVECTIVE EQULIBRIUM FOUND')
+            plt.plot(np.log10(z), np.log10(T))
+            plt.savefig('logTlogz.png')
+            plt.close()
+
+        print('RCE found')
     
+    def run_HELIOS(self, n_levels=25):
+
+        print('Finding RCE...')
+
+        x_N2 = self.x_gas['N2'][-1]
+        x_CO2 = self.x_gas['CO2'][-1]
+        x_H2O = self.x_gas['H2O'][-1]
+
+        species_data = {
+            'species' : ['H2O', 'CO2', 'H2', 'N2'],
+            'absorbing' : ['yes', 'yes', 'yes', 'yes'],
+            'scattering' : ['yes', 'yes', 'yes', 'yes'],
+            'mixing_ratio' : [x_H2O, x_CO2, 0, x_N2]
+        }
+        
+        species_df = pd.DataFrame(species_data)
+        species_df.to_csv(f'{HELIOS_path}/input/species2.dat', sep='    ')
+
+        recirculation = 0.25
+
+        R_star = SPECTRAL_TYPE_DATA[self.host_star_spectral_type]['Radius'] * R_SUN
+        T_star = SPECTRAL_TYPE_DATA[self.host_star_spectral_type]['Temperature']
+
+        orbital_distance = np.sqrt(((R_star ** 2) * STEFAN_BOLTZMANN * (T_star ** 4)) / (self.instellation * SOLAR_CONSTANT)) / AU
+
+        param_file_modifications = {
+            24 : f'BOA pressure [10^-6 bar] =                            {self.P_surface:.1e}                             [number > 0]                                 (CL: Y)',
+            36 : f'  no  --> f factor =                                  {recirculation:.2f}                            [number: 0.25 - 1]                           (CL: Y)',
+            39 : f'surface albedo =                                      0.0                             [file, number: 0 - 1]                        (CL: Y)',
+            67 : f'  manual --> surface gravity [cm s^-2] =              {self.g_surface * 100:.0f}                             [number > 0]                                 (CL: Y)',
+            68 : f'  manual --> orbital distance [AU] =                  {orbital_distance:.1f}                             [number > 0]                                 (CL: Y)',
+            69 : f'  manual --> radius planet [R_Jup] =                  {self.r_bottom / R_JUPITER}                           [number > 0]                                 (CL: Y)',
+            70 : f'  manual --> radius star [R_Sun] =                    {R_star:.1f}                               [number > 0]                                 (CL: Y)',
+            71 : f'  manual --> temperature star [K] =                   {T_star:.0f}                            [number >= 0]                                (CL: Y)',
+            99 : f'number of layers =                               {n_levels}                         [automatic, number > 0]                                        (CL: Y)'
+        }
+
+        param_file_path = 'templates/param.dat'
+        param_file_path_new = f'{HELIOS_path}/param.dat'
+
+        modify_file_by_lines(param_file_path, param_file_path_new, param_file_modifications)
+
+        wd = os.getcwd()
+        os.chdir(AGNI_path)
+        subprocess.run(['python3', 'helios.py'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        os.chdir(wd)
+
+        atm_df = pd.read_table(f'{HELIOS_path}/output/pl2/pl2_tp.dat', sep='\s+')
+
+        print(atm_df)
+
+        print('RCE found')
+
     def change_gas_species(self, modified_species, x_new):
 
         x_old = self.x_gas[modified_species]
