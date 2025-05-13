@@ -22,13 +22,13 @@ class planet:
         self.mass = M
         self.radius = R
 
-        print('GENERATING ATMOSPHERE...')
+        print('Generating atmosphere...')
 
         self.atmosphere = atmosphere(self.radius, self.mass, atm_vmrs, F_star, spec_type, P_surface, T_initial, tidally_locked)
 
-        print('ATMOSPHERE GENERATED')
+        print('Atmosphere genereated')
 
-        print('GENERATING INTERNAL STRUCTURE...')
+        print('Generating internal structure...')
 
         df_core, df_hydro = self.run_Magarathea(P_surface, self.atmosphere.T[-1])
 
@@ -47,7 +47,7 @@ class planet:
         self.hydrosphere = hydrosphere(m_hydro, r_hydro, P_hydro, T_hydro, rho_hydro)
         self.core = core(m_core, r_core, P_core, T_core, rho_core)
 
-        print('INTERNAL STRUCTURE GENERATED')
+        print('Internal structure generated')
 
         self.surface = surface(self.hydrosphere, self.atmosphere)
 
@@ -204,7 +204,7 @@ class planet:
             obj.hydrosphere.rho = hydro_grp['rho'][()]
 
             molarity_grp = hydro_grp['Molarity']
-            obj.hydrosphere.molarity = {
+            obj.hydrosphere.molality = {
                 species: molarity_grp.attrs[species]
                 for species in molarity_grp.attrs
             }
@@ -230,14 +230,21 @@ class planet:
 
 if __name__ == '__main__':
 
-    test_planet = planet(1 * M_EARTH, 1 * R_EARTH, 1, 1e5, 270, 'G2', 
-                         {'N2' : [0.78], 'O2' : [0.21], 'Ar' : [0.009], 'CO2' : [0.0004], 'H2O' : [0.00]},
-                           tidally_locked=False)
+    test_planet = planet(
+        1 * M_EARTH,
+        1 * R_EARTH, 
+        0.2, 
+        1e5, 
+        280, 
+        'G2', 
+        {'N2' : [0.78], 'O2' : [0.21], 'Ar' : [0.009], 'CO2' : [0.0003], 'H2O' : [0.02]},
+        tidally_locked=False
+        )
 
     test_planet.save_to_hdf5('planet.hdf5')
     test2 = planet.load_from_hdf5('planet.hdf5')
     test2.plot_PT()
-    print(f'Surface temperature: {test_planet.surface.T:.0f}')
+    print(f'Surface temperature: {test_planet.surface.T:.0f} K')
 
 
 
