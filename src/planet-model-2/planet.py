@@ -49,7 +49,7 @@ class planet:
 
         print('Internal structure generated')
 
-        self.surface = surface(self.hydrosphere, self.atmosphere)
+        # self.surface = surface(self.hydrosphere, self.atmosphere)
 
 
     def run_Magarathea(self, P_surface, T_surface):
@@ -233,18 +233,18 @@ if __name__ == '__main__':
     test_planet = planet(
         1 * M_EARTH,
         1 * R_EARTH, 
-        0.2, 
+        1.0, 
         1e5, 
         280, 
         'G2', 
-        {'N2' : [0.78], 'O2' : [0.21], 'Ar' : [0.009], 'CO2' : [0.0003], 'H2O' : [0.02]},
+        {'N2' : [0.98], 'CO2' : [0.0003], 'H2O' : [0.02]},
         tidally_locked=False
         )
 
     test_planet.save_to_hdf5('planet.hdf5')
     test2 = planet.load_from_hdf5('planet.hdf5')
     test2.plot_PT()
-    print(f'Surface temperature: {test_planet.surface.T:.0f} K')
+    # print(f'Surface temperature: {test_planet.surface.T:.0f} K')
 
 
 
