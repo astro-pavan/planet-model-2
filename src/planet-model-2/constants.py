@@ -34,3 +34,11 @@ SPECTRAL_TYPE_DATA = {
     "L1":  {"Radius": 0.09, "Mass": 0.07,  "Luminosity": 0.00017,"Temperature": 2200}
 } 
 # Zombeck, Martin V. (1990). Handbook of Space Astronomy and Astrophysics (2nd ed.). Cambridge University Press. ISBN 978-0-521-34787-7. 
+
+SPECIES_MMW = {
+    'H2O' : 0.018,
+    'CO2' : 0.044,
+    'N2' : 0.028,
+    'H2' : 0.002,
+    'O2' : 0.032
+} # kg / mol
