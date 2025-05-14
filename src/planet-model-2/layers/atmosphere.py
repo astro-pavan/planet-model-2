@@ -1,6 +1,6 @@
 from layers.layer import layer
 from utils import modify_file_by_lines
-from constants import G, IDEAL_GAS_CONSTANT, R_JUPITER, SPECTRAL_TYPE_DATA, STEFAN_BOLTZMANN, R_SUN, SOLAR_CONSTANT, AU
+from constants import G, IDEAL_GAS_CONSTANT, R_JUPITER, SPECTRAL_TYPE_DATA, STEFAN_BOLTZMANN, R_SUN, SOLAR_CONSTANT, AU, SPECIES_MMW
 
 import netCDF4
 import numpy as np
@@ -178,18 +178,11 @@ class atmosphere(layer):
         x_CO2 = self.x_gas['CO2'][-1]
         x_H2O = self.x_gas['H2O'][-1]
 
-        # species_data = {
-        #     'species' : ['H2O', 'CO2', 'H2', 'N2'],
-        #     'absorbing' : ['yes', 'yes', 'yes', 'yes'],
-        #     'scattering' : ['yes', 'yes', 'yes', 'yes'],
-        #     'mixing_ratio' : [x_H2O, x_CO2, 0, x_N2]
-        # }
-
         species_data = {
-            'species' : ['H2O', 'CO2'],
-            'absorbing' : ['yes', 'yes'],
-            'scattering' : ['yes', 'yes'],
-            'mixing_ratio' : [x_H2O, x_CO2]
+            'species' : ['H2O', 'CO2', 'N2'],
+            'absorbing' : ['yes', 'yes', 'yes'],
+            'scattering' : ['yes', 'yes', 'yes'],
+            'mixing_ratio' : [x_H2O, x_CO2, x_N2]
         }
         
         species_df = pd.DataFrame(species_data)
@@ -229,6 +222,29 @@ class atmosphere(layer):
         atm_df = pd.read_table(f'{HELIOS_path}/output/pl2/pl2_tp.dat', sep='\s+', skiprows=1)
 
         print(atm_df)
+
+        P = np.array(atm_df['press.[10^-6bar]']) * 10
+        T = np.array(atm_df['temp.[K]'])
+        z = np.array(atm_df['altitude[cm]']) * 100
+
+        mmw = 0 
+
+        for species in self.x_gas.keys():
+            mmw += self.x_gas[species][-1] * SPECIES_MMW[species]
+
+        print(mmw)
+
+        self.P = P
+        self.T = T
+        self.r = z + self.r_bottom
+
+        self.rho = (P * mmw) / (IDEAL_GAS_CONSTANT * T)
+
+        dr = - np.diff(self.r, prepend=self.r[0])
+        dm = (4 * np.pi * (self.r ** 2) * self.rho) * dr
+        self.m = (np.sum(dm) - np.cumsum(dm)) + self.m_bottom
+
+        self.mmw = mmw
 
         print('RCE found')
 
