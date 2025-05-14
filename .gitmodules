@@ -1,0 +1,6 @@
+[submodule "external/HELIOS"]
+	path = external/HELIOS
+	url = https://github.com/exoclime/helios.git
+[submodule "external/Magrathea"]
+	path = external/Magrathea
+	url = https://github.com/Huang-CL/Magrathea.git
