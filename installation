@@ -1,0 +1,6 @@
+cd external/Magrathea
+make -B
+cd ../..
+
+cd external
+tar -xvzf phreeqc-3.8.6-17100.tar.gz
