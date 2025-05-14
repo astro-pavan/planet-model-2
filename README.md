@@ -1,9 +1,9 @@
 ### Requirements ###
 
-CUDA
-g++
-make
-gsl
+- CUDA
+- g++
+- make
+- gsl
 
 Python modules
  - numpy
