@@ -2,3 +2,4 @@ __pycache__
 *.png
 *.hdf5
 external/phreeqc-3.8.6-17100/
+external/phreeqc/
