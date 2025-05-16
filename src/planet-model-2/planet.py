@@ -13,7 +13,7 @@ from surface import surface
 from utils import modify_file_by_lines
 from constants import M_EARTH, R_EARTH
 
-magrathea_path = '/data/pt426/Magrathea'
+magrathea_path = 'external/Magrathea'
 
 class planet:
 
@@ -32,24 +32,24 @@ class planet:
 
         df_core, df_hydro = self.run_Magarathea(P_surface, self.atmosphere.T[-1])
 
-        m_hydro = np.array(df_hydro['M (earth)'])[::-1] * M_EARTH
-        r_hydro = np.array(df_hydro['Radius (earth)'])[::-1] * R_EARTH
-        P_hydro = np.array(df_hydro['P (GPa)'])[::-1] * 1e9
-        T_hydro = np.array(df_hydro['T (K)'])[::-1]
-        rho_hydro =  np.array(df_hydro['Density (g cm^-3)'])[::-1] * 1e3
+        m_hydro = np.array(df_hydro['M (earth)']) * M_EARTH
+        r_hydro = np.array(df_hydro['Radius (earth)']) * R_EARTH
+        P_hydro = np.array(df_hydro['P (GPa)']) * 1e9
+        T_hydro = np.array(df_hydro['T (K)'])
+        rho_hydro =  np.array(df_hydro['Density (g cm^-3)']) * 1e3
 
-        m_core = np.array(df_core['M (earth)'])[::-1] * M_EARTH
-        r_core = np.array(df_core['Radius (earth)'])[::-1] * R_EARTH
-        P_core = np.array(df_core['P (GPa)'])[::-1] * 1e9
-        T_core = np.array(df_core['T (K)'])[::-1]  
-        rho_core =  np.array(df_core['Density (g cm^-3)'])[::-1] * 1e3
+        m_core = np.array(df_core['M (earth)']) * M_EARTH
+        r_core = np.array(df_core['Radius (earth)']) * R_EARTH
+        P_core = np.array(df_core['P (GPa)']) * 1e9
+        T_core = np.array(df_core['T (K)'])  
+        rho_core =  np.array(df_core['Density (g cm^-3)']) * 1e3
 
         self.hydrosphere = hydrosphere(m_hydro, r_hydro, P_hydro, T_hydro, rho_hydro)
         self.core = core(m_core, r_core, P_core, T_core, rho_core)
 
         print('Internal structure generated')
 
-        # self.surface = surface(self.hydrosphere, self.atmosphere)
+        self.surface = surface(self.hydrosphere, self.atmosphere)
 
 
     def run_Magarathea(self, P_surface, T_surface):
@@ -78,8 +78,8 @@ class planet:
 
         modify_file_by_lines(mode4_config_file_path, mode4_config_file_path, mode4_config_file_modifications)
 
-        os.chdir(magrathea_path)
-        subprocess.run(['./planet', 'run/mode4.cfg'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # os.chdir(magrathea_path)
+        subprocess.run(['./planet', 'run/mode4.cfg'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=magrathea_path)
 
         mode4_results_table = pd.read_table(mode4_output_file_path, sep='\s+')
 
@@ -97,8 +97,8 @@ class planet:
 
         modify_file_by_lines(mode0_config_file_path, mode0_config_file_path, mode0_config_file_modifications)
 
-        subprocess.run(['./planet', 'run/mode0.cfg'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        os.chdir(wd)
+        subprocess.run(['./planet', 'run/mode0.cfg'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=magrathea_path)
+        # os.chdir(wd)
 
         df = pd.read_table(mode0_output_file_path, sep='	 ', engine='python')
         
@@ -225,7 +225,6 @@ class planet:
             }
 
         return obj
-    
 
 
 if __name__ == '__main__':
@@ -237,13 +236,14 @@ if __name__ == '__main__':
         1e5, 
         280, 
         'G2', 
-        {'N2' : [0.98], 'CO2' : [0.0003], 'H2O' : [0.02]},
+        {'N2' : [0.977], 'CO2' : [0.003], 'H2O' : [0.02]},
         tidally_locked=False
         )
 
-    test_planet.save_to_hdf5('planet.hdf5')
-    test2 = planet.load_from_hdf5('planet.hdf5')
-    test2.plot_PT()
+    # test_planet.save_to_hdf5('output/planet.hdf5')
+    test_planet.surface.calculate_surface_conditions(keep_atmosphere_constant=False)
+    test_planet.surface.check_carbon()
+    # test_planet.
     # print(f'Surface temperature: {test_planet.surface.T:.0f} K')
 
 
