@@ -8,6 +8,7 @@ import pandas as pd
 from scipy.interpolate import CubicSpline
 import os
 import subprocess
+import sys
 import matplotlib.pyplot as plt
 
 AGNI_path = '/home/pt426/AGNI'
@@ -16,6 +17,10 @@ CUDA_path = '/data/pt426/cuda/cuda12/bin'
 CUDA_LD_path = '/data/pt426/cuda/cuda12/lib64'
 CUDA_DYLD_path = '/data/pt426/cuda/cuda12/lib'
 
+# ext_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "external", "HELIOS"))
+# sys.path.insert(0, ext_path)
+
+# from helios import run_helios
 
 spectral_types = {
     'M8' : 'trappist-1.txt',
@@ -44,6 +49,11 @@ class atmosphere(layer):
         self.P_surface = P_surface
         self.tidally_locked = tidally_locked
 
+        self.R_star = SPECTRAL_TYPE_DATA[self.host_star_spectral_type]['Radius'] * R_SUN
+        self.T_star = SPECTRAL_TYPE_DATA[self.host_star_spectral_type]['Temperature']
+
+        self.orbital_distance = np.sqrt(((self.R_star ** 2) * STEFAN_BOLTZMANN * (self.T_star ** 4)) / (self.instellation * SOLAR_CONSTANT)) / AU
+
         # self.run_AGNI(T_iso=T_surface_initial, x_gas=atm_vmrs, high_spectral_res=True)
         
         self.x_gas = atm_vmrs
@@ -51,7 +61,7 @@ class atmosphere(layer):
 
     def run_AGNI(self, T_iso=None, x_gas=None, high_spectral_res=False, n_levels=25, diagnostic_plots=True):
 
-        print('Finding RCE...')
+        print('Finding RCE with AGNI...')
 
         wd = os.getcwd()
         config_file_path = 'templates/default.toml'
@@ -172,17 +182,17 @@ class atmosphere(layer):
     
     def run_HELIOS(self, n_levels=25):
 
-        print('Finding RCE...')
+        print('Finding RCE with HELIOS...')
 
-        x_N2 = self.x_gas['N2'][-1]
+        # x_N2 = self.x_gas['N2'][-1]
         x_CO2 = self.x_gas['CO2'][-1]
         x_H2O = self.x_gas['H2O'][-1]
 
         species_data = {
-            'species' : ['H2O', 'CO2', 'N2'],
-            'absorbing' : ['yes', 'yes', 'yes'],
-            'scattering' : ['yes', 'yes', 'yes'],
-            'mixing_ratio' : [x_H2O, x_CO2, x_N2]
+            'species' : ['H2O', 'CO2'],
+            'absorbing' : ['yes', 'yes'],
+            'scattering' : ['yes', 'yes'],
+            'mixing_ratio' : [x_H2O, x_CO2]
         }
         
         species_df = pd.DataFrame(species_data)
@@ -190,20 +200,15 @@ class atmosphere(layer):
 
         recirculation = 0.25
 
-        R_star = SPECTRAL_TYPE_DATA[self.host_star_spectral_type]['Radius'] * R_SUN
-        T_star = SPECTRAL_TYPE_DATA[self.host_star_spectral_type]['Temperature']
-
-        orbital_distance = np.sqrt(((R_star ** 2) * STEFAN_BOLTZMANN * (T_star ** 4)) / (self.instellation * SOLAR_CONSTANT)) / AU
-
         param_file_modifications = {
             24 : f'BOA pressure [10^-6 bar] =                            {self.P_surface:.1e}                             [number > 0]                                 (CL: Y)',
             36 : f'  no  --> f factor =                                  {recirculation:.2f}                            [number: 0.25 - 1]                           (CL: Y)',
-            39 : f'surface albedo =                                      0.0                             [file, number: 0 - 1]                        (CL: Y)',
+            39 : f'surface albedo =                                      0.06                            [file, number: 0 - 1]                        (CL: Y)',
             67 : f'  manual --> surface gravity [cm s^-2] =              {self.g_surface * 100:.0f}                             [number > 0]                                 (CL: Y)',
-            68 : f'  manual --> orbital distance [AU] =                  {orbital_distance:.1f}                             [number > 0]                                 (CL: Y)',
+            68 : f'  manual --> orbital distance [AU] =                  {self.orbital_distance:.1f}                             [number > 0]                                 (CL: Y)',
             69 : f'  manual --> radius planet [R_Jup] =                  {self.r_bottom / R_JUPITER:4f}                           [number > 0]                                 (CL: Y)',
-            70 : f'  manual --> radius star [R_Sun] =                    {R_star / R_SUN:.1f}                               [number > 0]                                 (CL: Y)',
-            71 : f'  manual --> temperature star [K] =                   {T_star:.0f}                            [number >= 0]                                (CL: Y)',
+            70 : f'  manual --> radius star [R_Sun] =                    {self.R_star / R_SUN:.1f}                               [number > 0]                                 (CL: Y)',
+            71 : f'  manual --> temperature star [K] =                   {self.T_star:.0f}                            [number >= 0]                                (CL: Y)',
             99 : f'number of layers =                               {n_levels}                         [automatic, number > 0]                                        (CL: Y)'
         }
 
@@ -217,11 +222,9 @@ class atmosphere(layer):
         env["LD_LIBRARY_PATH"] = CUDA_LD_path + ":" + env.get("LD_LIBRARY_PATH", "")
         env["DYLD_LIBRARY_PATH"] = CUDA_DYLD_path + ":" + env.get("LD_LIBRARY_PATH", "")
 
-        subprocess.run([f'.venv/bin/python', 'helios.py'], cwd=HELIOS_path, env=env)
+        subprocess.run([f'.venv/bin/python', 'helios.py'], cwd=HELIOS_path, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         atm_df = pd.read_table(f'{HELIOS_path}/output/pl2/pl2_tp.dat', sep='\s+', skiprows=1)
-
-        print(atm_df)
 
         P = np.array(atm_df['press.[10^-6bar]']) * 10
         T = np.array(atm_df['temp.[K]'])
@@ -231,8 +234,6 @@ class atmosphere(layer):
 
         for species in self.x_gas.keys():
             mmw += self.x_gas[species][-1] * SPECIES_MMW[species]
-
-        print(mmw)
 
         self.P = P
         self.T = T
@@ -260,6 +261,8 @@ class atmosphere(layer):
         for species in self.x_gas.keys():
             if species != modified_species:
                 self.x_gas[species] = self.x_gas[species] / (1 + (x_new - x_old))
+
+        # self.P_surface += (x_new - x_old) * self.P_surface
     
 
 
