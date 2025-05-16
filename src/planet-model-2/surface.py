@@ -1,6 +1,6 @@
 from layers.atmosphere import atmosphere
 from layers.hydrosphere import hydrosphere
-from constants import ABSOLUTE_ZERO, EARTH_ATM
+from constants import ABSOLUTE_ZERO, EARTH_ATM, SPECIES_MMW
 from utils import modify_file_by_lines
 
 import numpy as np
@@ -8,7 +8,8 @@ import pandas as pd
 import os
 import subprocess
 
-PHREEQC_path = '/data/pt426/phreeqc/bin'
+# PHREEQC_path = '/data/pt426/phreeqc/bin'
+PHREEQC_path = 'external/phreeqc/bin'
 
 class surface:
 
@@ -17,55 +18,97 @@ class surface:
         self.hydrosphere = hydrosphere
         self.atmosphere = atmosphere
 
-        self.P = self.atmosphere.P[-1]
-        self.T = self.atmosphere.T[-1]
+        self.P = self.atmosphere.P[0]
+        self.T = self.atmosphere.T[0]
 
         self.calculate_surface_conditions()
-        #self.calculate_surface_conditions()
-        #self.calculate_surface_conditions()
-
-    def calculate_surface_conditions(self):
-        self.gas_ocean_equilbrium(keep_atmosphere_constant=True)
-        self.atmosphere.run_AGNI(T_iso=self.T, high_spectral_res=False)
+        self.check_carbon()
+        
+    def calculate_surface_conditions(self, keep_atmosphere_constant=True):
+        self.gas_ocean_equilbrium(keep_atmosphere_constant, modify_H2O=False)
+        self.H2O_evaporation()
+        # self.atmosphere.run_AGNI(T_iso=self.T, high_spectral_res=False)
         self.atmosphere.run_HELIOS()
-        self.T = self.atmosphere.T[-1]
-        print(f'{self.T:0f} K')
+        self.T = self.atmosphere.T[0]
 
-    def gas_ocean_equilbrium(self, keep_atmosphere_constant=True):
+        x_H2O = self.atmosphere.x_gas['H2O'][0]
+        x_CO2 = self.atmosphere.x_gas['CO2'][0]
+        mol_C = self.hydrosphere.molality['C']
 
-        x_CO2 = self.atmosphere.x_gas['CO2'][-1]
+        print(f'x_H2O : {x_H2O:.3%}   x_CO2 : {x_CO2:.3%}')
+        print(f'C dissolved : {mol_C} mol/kg')
+        print(f'Surface temperature: {self.T:.0f} K ({self.T + ABSOLUTE_ZERO:.0f} C)')
+
+    def gas_ocean_equilbrium(self, keep_atmosphere_constant=True, modify_H2O=True):
+
+        print('Calculating atmosphere ocean interactions...')
+
+        x_CO2 = self.atmosphere.x_gas['CO2'][0]
         
         if keep_atmosphere_constant:
 
-            m_water = 1
-            mol_CO2 = 1
+            print('Keeping atmosphere constant')
 
-        else:
+            # m_water = 1
+            # mol_atm_CO2 = 10
 
-            mmw_atm = self.atmosphere.mmw[-1]
+            mmw_atm = self.atmosphere.mmw
             m_atm = self.atmosphere.column_surface_density() / self.hydrosphere.column_surface_density()
             m_water = 1
 
             mol_atm = m_atm / mmw_atm
-            mol_CO2 = mol_atm * x_CO2
+            mol_atm_CO2 = mol_atm * x_CO2
+
+        else:
+
+            print('Modifying atmosphere')
+
+            mmw_atm = self.atmosphere.mmw
+            m_atm = self.atmosphere.column_surface_density() / self.hydrosphere.column_surface_density()
+            m_water = 1
+
+            mol_atm = m_atm / mmw_atm
+            mol_atm_CO2 = mol_atm * x_CO2
 
         molality_C, x_CO2, x_H2O = CO2_equilibrium(
             self.P, self.T, 
             x_CO2,
             self.hydrosphere.molality['C'],
             m_water,
-            mol_CO2,
+            mol_atm_CO2,
             constant_atmosphere=keep_atmosphere_constant
             )
         
         if not keep_atmosphere_constant:
             self.atmosphere.change_gas_species('CO2', x_CO2)
         
-        self.atmosphere.change_gas_species('H2O', x_H2O)
+        if modify_H2O:
+            self.atmosphere.change_gas_species('H2O', x_H2O)
 
         self.hydrosphere.molality['C'] = molality_C
-                
 
+    def check_carbon(self):
+
+        mmw_atm = 0
+        m_atm = self.atmosphere.column_surface_density()
+        m_ocean = self.hydrosphere.column_surface_density()
+        molality_C = self.hydrosphere.molality['C']
+
+        for species in self.atmosphere.x_gas.keys():
+            mmw_atm += self.atmosphere.x_gas[species][0] * SPECIES_MMW[species]
+
+        x_CO2 = self.atmosphere.x_gas[species][0]
+
+        n_carbon_atm = x_CO2 * (m_atm / mmw_atm)
+
+        n_carbon_ocean = molality_C * m_ocean
+
+        n_carbon_total = n_carbon_atm + n_carbon_ocean
+
+        print(f'Carbon in ocean : {n_carbon_ocean:.6e} moles')
+        print(f'Carbon in atm : {n_carbon_atm:.6e} moles')
+        print(f'Total carbon : {n_carbon_total:.6e} moles')
+                
     def H2O_evaporation(self):
 
         relative_humidity = 0.8
@@ -169,10 +212,7 @@ def phreeqc_calculation(P, T, m_water, mol_CO2, x_CO2, molality_C):
 
     modify_file_by_lines(input_template_file_path, input_file_path_new, input_file_modifications)
 
-    wd = os.getcwd()
-    os.chdir(PHREEQC_path)
-    subprocess.run(['./phreeqc', 'input'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    os.chdir(wd)
+    subprocess.run(['./phreeqc', 'input'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=PHREEQC_path)
 
     solution_df = pd.read_table(output_file_path, sep='\s+')
 
