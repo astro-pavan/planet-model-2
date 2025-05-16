@@ -3,4 +3,5 @@ __pycache__
 *.hdf5
 external/phreeqc-3.8.6-17100/
 external/phreeqc/
-external/Magrathea/run/
+external/Magrathea/run/mode0.cfg
+external/Magrathea/run/mode4.cfg
