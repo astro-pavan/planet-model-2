@@ -57,6 +57,7 @@ class atmosphere(layer):
         # self.run_AGNI(T_iso=T_surface_initial, x_gas=atm_vmrs, high_spectral_res=True)
         
         self.x_gas = atm_vmrs
+        self.amount = atm_vmrs
         self.run_HELIOS()
 
     def run_AGNI(self, T_iso=None, x_gas=None, high_spectral_res=False, n_levels=25, diagnostic_plots=True):
